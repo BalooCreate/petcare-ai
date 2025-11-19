@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: web-petcare-ai
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    runtime: node
+    region: frankfurt
+    branch: main
+    autoDeploy: true
