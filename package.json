@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "react-router dev",
-    "build": "react-router build",
+    "build": "npm install && react-router build",
     "preview": "react-router serve",
     "typecheck": "react-router typegen && tsc --noEmit"
   },
