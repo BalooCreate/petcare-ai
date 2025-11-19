@@ -1,0 +1,11 @@
+plugins: [
+  windowsRouteImportFix(), // 🧩 fix pentru ?update pe Windows
+  tsconfigPaths(),
+  nextPublicProcessEnv(),
+  restartEnvFileChange(),
+  reactRouterHonoServer({
+    serverEntryPoint: "./__create/index.ts",
+    runtime: "node"
+  }),
+  ...
+]
