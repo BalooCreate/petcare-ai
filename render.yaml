@@ -3,7 +3,6 @@ services:
     name: web-petcare-ai
     env: node
     runtime: node
-    nodeVersion: 22
     buildCommand: npm install && npm run build
     startCommand: npm start
     autoDeploy: true
