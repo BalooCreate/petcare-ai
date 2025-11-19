@@ -1,46 +1,64 @@
-import { useCallback } from 'react';
-import { signIn, signOut } from "@auth/create/react";
+import { useCallback } from "react";
 
 function useAuth() {
-  const callbackUrl = typeof window !== 'undefined' 
-    ? new URLSearchParams(window.location.search).get('callbackUrl')
-    : null;
+  const callbackUrl =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("callbackUrl")
+      : null;
 
-  const signInWithCredentials = useCallback((options) => {
-    return signIn("credentials-signin", {
-      ...options,
-      callbackUrl: callbackUrl ?? options.callbackUrl
-    });
-  }, [callbackUrl])
+  // Login cu email/parola
+  const signInWithCredentials = useCallback(
+    async (options) => {
+      const res = await fetch("/api/auth/signin/credentials-signin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(options),
+      });
 
-  const signUpWithCredentials = useCallback((options) => {
-    return signIn("credentials-signup", {
-      ...options,
-      callbackUrl: callbackUrl ?? options.callbackUrl
-    });
-  }, [callbackUrl])
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
 
-  const signInWithGoogle = useCallback((options) => {
-    return signIn("google", {
-      ...options,
-      callbackUrl: callbackUrl ?? options.callbackUrl
-    });
+      window.location.href = callbackUrl ?? data.redirect ?? "/";
+    },
+    [callbackUrl]
+  );
+
+  // Înregistrare cu email/parola
+  const signUpWithCredentials = useCallback(
+    async (options) => {
+      const res = await fetch("/api/auth/signin/credentials-signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(options),
+      });
+
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+
+      window.location.href = callbackUrl ?? data.redirect ?? "/";
+    },
+    [callbackUrl]
+  );
+
+  // Login cu Google
+  const signInWithGoogle = useCallback(() => {
+    window.location.href = `/api/auth/signin/google?callbackUrl=${
+      callbackUrl ?? "/"
+    }`;
   }, [callbackUrl]);
-  const signInWithFacebook = useCallback((options) => {
-    return signIn("facebook", options);
-  }, []);
-  const signInWithTwitter = useCallback((options) => {
-    return signIn("twitter", options);
+
+  // Logout
+  const signOut = useCallback(async () => {
+    await fetch("/api/auth/signout", { method: "POST" });
+    window.location.href = "/";
   }, []);
 
   return {
     signInWithCredentials,
     signUpWithCredentials,
     signInWithGoogle,
-    signInWithFacebook,
-    signInWithTwitter,
     signOut,
-  }
+  };
 }
 
 export default useAuth;
