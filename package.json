@@ -62,8 +62,8 @@
     "vitest": "^3.2.4"
   },
   "optionalDependencies": {
+    "@rollup/rollup-darwin-arm64": "*",
     "@rollup/rollup-linux-x64-gnu": "*",
-    "@rollup/rollup-win32-x64-msvc": "*",
-    "@rollup/rollup-darwin-arm64": "*"
+    "@rollup/rollup-win32-x64-msvc": "*"
   }
 }
