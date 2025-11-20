@@ -3,9 +3,6 @@
  * not attempt to edit it. Modifying it will have no effect on your project as it is controlled by our system.
  * Do not import @auth/create or @auth/create anywhere else or it may break. This is an internal package.
  */
-// -------------------------------------------------------------------------
-// CORECȚIE CRITICĂ: Înlocuim importul privat (CreateAuth) cu cel public (Auth)
-// -------------------------------------------------------------------------
 import { Auth } from "@hono/auth-js" 
 import Credentials from "@auth/core/providers/credentials"
 import { Pool } from '@neondatabase/serverless'
@@ -267,9 +264,7 @@ const pool = new Pool({
     });
 const adapter = Adapter(pool);
 
-// -------------------------------------------------------------------------
-// CORECȚIE CRITICĂ: Înlocuim funcția CreateAuth cu funcția Auth importată
-// -------------------------------------------------------------------------
+// CORECȚIE FINALĂ: Înlocuim funcția CreateAuth cu funcția Auth importată
 export const { auth } = Auth({
   providers: [Credentials({
   id: 'credentials-signin',
