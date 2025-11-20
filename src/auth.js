@@ -264,8 +264,7 @@ const pool = new Pool({
     });
 const adapter = Adapter(pool);
 
-// CORECȚIE FINALĂ: Înlocuim funcția CreateAuth cu funcția Auth importată
-export const { auth } = Auth({
+export const { auth } = Auth({ 
   providers: [Credentials({
   id: 'credentials-signin',
   name: 'Credentials Sign in',

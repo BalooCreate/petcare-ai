@@ -2,19 +2,16 @@
   "name": "web-petcare-ai",
   "private": true,
   "type": "module",
-  "scripts": {
+"scripts": {
     "dev": "react-router dev",
     "build": "react-router build",
     "preview": "react-router serve",
     "start": "react-router serve",
     "typecheck": "react-router typegen && tsc --noEmit"
   },
-  "engines": {
-    "node": "22.x"
-  },
   "dependencies": {
     "@auth/core": "^0.37.2",
-    "@auth/react": "^1.0.67-alpha.0",
+    "@auth/react": "^1.0.0",
     "@chakra-ui/react": "2.8.2",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
@@ -60,10 +57,5 @@
     "autoprefixer": "^10.4.21",
     "postcss": "^8.5.3",
     "vitest": "^3.2.4"
-  },
-  "optionalDependencies": {
-    "@rollup/rollup-darwin-arm64": "*",
-    "@rollup/rollup-linux-x64-gnu": "*",
-    "@rollup/rollup-win32-x64-msvc": "*"
   }
 }
