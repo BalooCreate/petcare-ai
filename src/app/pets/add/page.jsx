@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import useUser from "@/utils/useUser";
-import useUpload from "@/utils/useUpload";
+import useUser from "../../../utils/useUser"; // ✅ TREI nivele: ../../../
+import useUpload from "../../../utils/useUpload"; // ✅ TREI nivele: ../../../
+import { useNavigate } from "react-router";
 import {
   PawPrint,
   ArrowLeft,
@@ -15,6 +16,7 @@ import {
 function MainComponent() {
   const { data: user, loading: userLoading } = useUser();
   const [upload, { loading: uploadLoading }] = useUpload();
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -58,7 +60,6 @@ function MainComponent() {
 
       let photoUrl = null;
 
-      // Upload photo if provided
       if (photoFile) {
         const uploadResult = await upload({
           reactNativeAsset: {
@@ -75,7 +76,6 @@ function MainComponent() {
         photoUrl = uploadResult.url;
       }
 
-      // Create pet
       const response = await fetch("/api/pets", {
         method: "POST",
         headers: {
@@ -96,8 +96,7 @@ function MainComponent() {
         throw new Error(errorData.error || "Failed to add pet");
       }
 
-      // Redirect to dashboard on success
-      window.location.href = "/dashboard";
+      navigate("/dashboard");
     } catch (err) {
       console.error("Error adding pet:", err);
       setError(err.message);
@@ -132,7 +131,7 @@ function MainComponent() {
           <div className="flex items-center justify-between py-4">
             <div className="flex items-center gap-4">
               <button
-                onClick={() => (window.location.href = "/dashboard")}
+                onClick={() => navigate("/dashboard")}
                 className="text-gray-600 hover:text-gray-800 p-2 rounded-lg hover:bg-gray-100 transition-colors"
               >
                 <ArrowLeft className="w-5 h-5" />
@@ -280,7 +279,7 @@ function MainComponent() {
           <div className="flex gap-4">
             <button
               type="button"
-              onClick={() => (window.location.href = "/dashboard")}
+              onClick={() => navigate("/dashboard")}
               className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-6 rounded-lg font-medium transition-colors"
             >
               Cancel

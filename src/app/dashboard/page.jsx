@@ -1,7 +1,6 @@
-"use client";
-
 import { useState, useEffect } from "react";
-import useUser from "@/utils/useUser";
+import useUser from "../../utils/useUser"; 
+import { useNavigate } from "react-router"; 
 import {
   PawPrint,
   Plus,
@@ -11,17 +10,35 @@ import {
   Camera,
   Clock,
   Bell,
-  Settings,
   LogOut,
 } from "lucide-react";
 
-function MainComponent() {
+function Dashboard() {
   const { data: user, loading: userLoading } = useUser();
-  const [pets, setPets] = useState([]);
-  const [upcomingSchedules, setUpcomingSchedules] = useState([]);
-  const [recentHealthLogs, setRecentHealthLogs] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
+  // --- DATE SIMULATE (MOCK DATA) ---
+  // Le folosim ca să vezi interfața imediat, fără bază de date conectată
+  const [pets, setPets] = useState([
+    { id: 1, name: "Bella", breed: "Golden Retriever", age: 3, photo_url: null },
+    { id: 2, name: "Luna", breed: "Siamese Cat", age: 2, photo_url: null }
+  ]);
+  
+  const [upcomingSchedules, setUpcomingSchedules] = useState([
+    { id: 1, title: "Morning Walk", pet_name: "Bella", next_due: new Date().toISOString(), schedule_type: "walk" },
+    { id: 2, title: "Dinner", pet_name: "Luna", next_due: new Date().toISOString(), schedule_type: "feeding" }
+  ]);
+
+  const [recentHealthLogs, setRecentHealthLogs] = useState([
+    { id: 1, title: "Annual Vaccination", pet_name: "Bella", date_logged: new Date().toISOString(), log_type: "vet_visit" }
+  ]);
+
+  // Setăm loading pe false din start ca să apară pagina instant
+  const [loading, setLoading] = useState(false);
+
+  /* 
+  // --- AM COMENTAT PARTEA CARE BLOCA PAGINA ---
+  // Această parte încerca să ia date reale și bloca totul
   useEffect(() => {
     if (user) {
       fetchDashboardData();
@@ -31,33 +48,19 @@ function MainComponent() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-
-      // Fetch pets
       const petsResponse = await fetch("/api/pets");
       if (petsResponse.ok) {
         const petsData = await petsResponse.json();
         setPets(petsData.pets || []);
       }
-
-      // Fetch upcoming schedules
-      const schedulesResponse = await fetch("/api/care-schedules");
-      if (schedulesResponse.ok) {
-        const schedulesData = await schedulesResponse.json();
-        setUpcomingSchedules(schedulesData.schedules?.slice(0, 5) || []);
-      }
-
-      // Fetch recent health logs
-      const logsResponse = await fetch("/api/health-logs");
-      if (logsResponse.ok) {
-        const logsData = await logsResponse.json();
-        setRecentHealthLogs(logsData.logs?.slice(0, 5) || []);
-      }
+      // ... restul codului ...
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
     } finally {
       setLoading(false);
     }
   };
+  */
 
   if (userLoading || loading) {
     return (
@@ -70,9 +73,10 @@ function MainComponent() {
     );
   }
 
+  // Redirect de siguranță
   if (!user) {
     if (typeof window !== "undefined") {
-      window.location.href = "/account/signin";
+       window.location.href = "/account/signin";
     }
     return null;
   }
@@ -90,29 +94,20 @@ function MainComponent() {
 
   const getScheduleTypeIcon = (type) => {
     switch (type) {
-      case "feeding":
-        return "🍽️";
-      case "walk":
-        return "🚶";
-      case "medication":
-        return "💊";
-      case "vet_appointment":
-        return "🏥";
-      default:
-        return "📅";
+      case "feeding": return "🍽️";
+      case "walk": return "🚶";
+      case "medication": return "💊";
+      case "vet_appointment": return "🏥";
+      default: return "📅";
     }
   };
 
   const getLogTypeIcon = (type) => {
     switch (type) {
-      case "symptom":
-        return "🩺";
-      case "medication":
-        return "💊";
-      case "vet_visit":
-        return "🏥";
-      default:
-        return "📝";
+      case "symptom": return "🩺";
+      case "medication": return "💊";
+      case "vet_visit": return "🏥";
+      default: return "📝";
     }
   };
 
@@ -135,7 +130,7 @@ function MainComponent() {
                 Welcome, {user.name || user.email}
               </span>
               <button
-                onClick={() => (window.location.href = "/chat")}
+                onClick={() => navigate("/chat")}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
               >
                 <MessageCircle className="w-4 h-4" />
@@ -157,15 +152,14 @@ function MainComponent() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">Dashboard</h1>
           <p className="text-gray-600">
-            Keep track of your pets' health, schedules, and get AI-powered
-            advice
+            Keep track of your pets' health, schedules, and get AI-powered advice
           </p>
         </div>
 
         {/* Quick Actions */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <button
-            onClick={() => (window.location.href = "/pets/add")}
+            onClick={() => navigate("/pets/add")}
             className="bg-white rounded-xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow text-center group"
           >
             <div className="bg-green-100 p-3 rounded-full w-fit mx-auto mb-3 group-hover:bg-green-200 transition-colors">
@@ -176,7 +170,7 @@ function MainComponent() {
           </button>
 
           <button
-            onClick={() => (window.location.href = "/schedules")}
+            onClick={() => navigate("/schedules")}
             className="bg-white rounded-xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow text-center group"
           >
             <div className="bg-blue-100 p-3 rounded-full w-fit mx-auto mb-3 group-hover:bg-blue-200 transition-colors">
@@ -187,7 +181,7 @@ function MainComponent() {
           </button>
 
           <button
-            onClick={() => (window.location.href = "/health")}
+            onClick={() => navigate("/health")}
             className="bg-white rounded-xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow text-center group"
           >
             <div className="bg-purple-100 p-3 rounded-full w-fit mx-auto mb-3 group-hover:bg-purple-200 transition-colors">
@@ -198,7 +192,7 @@ function MainComponent() {
           </button>
 
           <button
-            onClick={() => (window.location.href = "/chat")}
+            onClick={() => navigate("/chat")}
             className="bg-white rounded-xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow text-center group"
           >
             <div className="bg-orange-100 p-3 rounded-full w-fit mx-auto mb-3 group-hover:bg-orange-200 transition-colors">
@@ -219,7 +213,7 @@ function MainComponent() {
                   My Pets
                 </h2>
                 <button
-                  onClick={() => (window.location.href = "/pets/add")}
+                  onClick={() => navigate("/pets/add")}
                   className="text-green-600 hover:text-green-700 p-1"
                 >
                   <Plus className="w-5 h-5" />
@@ -233,7 +227,7 @@ function MainComponent() {
                   </div>
                   <p className="text-gray-600 mb-4">No pets added yet</p>
                   <button
-                    onClick={() => (window.location.href = "/pets/add")}
+                    onClick={() => navigate("/pets/add")}
                     className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
                   >
                     Add Your First Pet
@@ -245,7 +239,7 @@ function MainComponent() {
                     <div
                       key={pet.id}
                       className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-                      onClick={() => (window.location.href = `/pets/${pet.id}`)}
+                      onClick={() => navigate(`/pets/${pet.id}`)}
                     >
                       <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
                         {pet.photo_url ? (
@@ -284,7 +278,7 @@ function MainComponent() {
                   Upcoming Care
                 </h2>
                 <button
-                  onClick={() => (window.location.href = "/schedules")}
+                  onClick={() => navigate("/schedules")}
                   className="text-blue-600 hover:text-blue-700 text-sm font-medium"
                 >
                   View All
@@ -331,7 +325,7 @@ function MainComponent() {
                   Recent Health Logs
                 </h2>
                 <button
-                  onClick={() => (window.location.href = "/health")}
+                  onClick={() => navigate("/health")}
                   className="text-purple-600 hover:text-purple-700 text-sm font-medium"
                 >
                   View All
@@ -375,4 +369,4 @@ function MainComponent() {
   );
 }
 
-export default MainComponent;
+export default Dashboard;

@@ -8,10 +8,23 @@ import {
   Users,
   Star,
 } from "lucide-react";
-import useUser from "@/utils/useUser";
+import { Link, useNavigate } from "react-router"; 
+import { useEffect } from "react";
+import useUser from "../utils/useUser"; 
 
-function MainComponent() {
+function LandingPage() {
   const { data: user, loading } = useUser();
+  const navigate = useNavigate();
+
+  // --- AM COMENTAT REDIRECȚIONAREA AUTOMATĂ ---
+  // Astfel poți vedea Landing Page-ul chiar dacă ești "logat"
+  /*
+  useEffect(() => {
+    if (user) {
+      navigate("/dashboard");
+    }
+  }, [user, navigate]);
+  */
 
   const features = [
     {
@@ -69,13 +82,8 @@ function MainComponent() {
     );
   }
 
-  if (user) {
-    // Redirect authenticated users to dashboard
-    if (typeof window !== "undefined") {
-      window.location.href = "/dashboard";
-    }
-    return null;
-  }
+  // --- AM ELIMINAT ACEASTĂ LINIE CARE FĂCEA ECRANUL ALB ---
+  // if (user) return null; 
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50">
@@ -92,18 +100,30 @@ function MainComponent() {
               </span>
             </div>
             <div className="flex items-center gap-4">
-              <a
-                href="/account/signin"
-                className="text-gray-600 hover:text-gray-800 font-medium"
-              >
-                Sign In
-              </a>
-              <a
-                href="/account/signup"
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-              >
-                Get Started
-              </a>
+              {/* Dacă ești logat, îți arătăm buton spre Dashboard, altfel Sign In */}
+              {user ? (
+                <Link
+                  to="/dashboard"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                >
+                  Go to Dashboard
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    to="/account/signin"
+                    className="text-gray-600 hover:text-gray-800 font-medium"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    to="/account/signup"
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                  >
+                    Get Started
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -130,13 +150,13 @@ function MainComponent() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a
-              href="/account/signup"
+            <Link
+              to={user ? "/dashboard" : "/account/signup"}
               className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-lg font-medium text-lg transition-colors inline-flex items-center justify-center gap-2"
             >
-              Start Free Trial
+              {user ? "Go to Dashboard" : "Start Free Trial"}
               <Heart className="w-5 h-5" />
-            </a>
+            </Link>
             <a
               href="#features"
               className="border border-gray-300 hover:border-gray-400 text-gray-700 px-8 py-4 rounded-lg font-medium text-lg transition-colors"
@@ -236,13 +256,13 @@ function MainComponent() {
             Join thousands of pet parents who trust PetAssistent for their pet's
             health and happiness.
           </p>
-          <a
-            href="/account/signup"
+          <Link
+            to="/account/signup"
             className="bg-white hover:bg-gray-100 text-green-600 px-8 py-4 rounded-lg font-medium text-lg transition-colors inline-flex items-center gap-2"
           >
             Start Your Free Trial
             <PawPrint className="w-5 h-5" />
-          </a>
+          </Link>
         </div>
       </section>
 
@@ -280,4 +300,4 @@ function MainComponent() {
   );
 }
 
-export default MainComponent;
+export default LandingPage;

@@ -1,20 +1,13 @@
 /** @type {import('tailwindcss').Config} */
-module.exports = {
+export default {
   content: [
     "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx,html}",
-    "./app/**/*.{js,ts,jsx,tsx,html}",
-    "./__create/**/*.{js,ts,jsx,tsx,html}"
+    "./src/**/*.{js,ts,jsx,tsx}", // Scanează tot folderul src
   ],
   theme: {
-    fontFamily: {
-      sans: ["Inter", "sans-serif"],
-    },
     extend: {
       fontFamily: {
-        poppins: ["Poppins", "sans-serif"],
-        roboto: ["Roboto", "sans-serif"],
-        montserrat: ["Montserrat", "sans-serif"],
+        sans: ["Inter", "sans-serif"],
       },
     },
   },

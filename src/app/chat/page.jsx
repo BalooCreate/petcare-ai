@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import useUser from "@/utils/useUser";
-import useHandleStreamResponse from "@/utils/useHandleStreamResponse";
+import { useState, useEffect, useRef } from "react";
+import useUser from "../../utils/useUser"; 
 import {
   PawPrint,
   Send,
@@ -12,15 +11,15 @@ import {
   User,
   Loader2,
 } from "lucide-react";
+import { useNavigate } from "react-router";
 
 function MainComponent() {
   const { data: user, loading: userLoading } = useUser();
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState("");
-  const [streamingMessage, setStreamingMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [conversationId, setConversationId] = useState(null);
   const messagesEndRef = useRef(null);
+  const navigate = useNavigate();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -28,21 +27,7 @@ function MainComponent() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, streamingMessage]);
-
-  const handleFinish = useCallback((message) => {
-    setMessages((prev) => [
-      ...prev,
-      { role: "assistant", content: message, id: Date.now() },
-    ]);
-    setStreamingMessage("");
-    setIsLoading(false);
-  }, []);
-
-  const handleStreamResponse = useHandleStreamResponse({
-    onChunk: setStreamingMessage,
-    onFinish: handleFinish,
-  });
+  }, [messages]);
 
   const sendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return;
@@ -55,71 +40,40 @@ function MainComponent() {
 
     setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
-
-    const messageToSend = inputMessage.trim();
+    
+    // Curățăm input-ul imediat
+    const currentInput = inputMessage;
     setInputMessage("");
 
-    try {
-      // Save user message to database
-      const chatResponse = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          conversation_id: conversationId,
-          message: messageToSend,
-          role: "user",
-          title: conversationId ? undefined : "Pet Care Chat",
-        }),
-      });
-
-      if (chatResponse.ok) {
-        const chatData = await chatResponse.json();
-        if (!conversationId) {
-          setConversationId(chatData.conversation_id);
+    // --- SIMULARE AI ---
+    // Așteptăm 1.5 secunde să pară că gândește
+    setTimeout(() => {
+        let responseText = "That's a great question!";
+        
+        // Răspunsuri simple bazate pe cuvinte cheie
+        const lowerInput = currentInput.toLowerCase();
+        if (lowerInput.includes("chocolate")) {
+            responseText = "⚠️ Chocolate is toxic to dogs! It contains theobromine, which dogs cannot metabolize well. If your dog ate chocolate, please contact your vet immediately.";
+        } else if (lowerInput.includes("meow") || lowerInput.includes("cat")) {
+            responseText = "Cats often meow at night due to boredom, hunger, or seeking attention. Ensuring they have a play session before bed might help!";
+        } else if (lowerInput.includes("feed") || lowerInput.includes("food")) {
+            responseText = "Feeding schedules depend on your pet's age and breed. Generally, puppies need 3-4 meals a day, while adult dogs do well with 2.";
+        } else {
+            const genericResponses = [
+                "I'm your AI Pet Assistant. While I can give general advice, for serious medical issues, always consult a vet.",
+                "That sounds interesting! Tell me more about your pet's behavior.",
+                "Keeping your pet hydrated and active is key to a long, happy life.",
+                "Could you clarify what kind of pet you are asking about?"
+            ];
+            responseText = genericResponses[Math.floor(Math.random() * genericResponses.length)];
         }
-      }
-
-      // Prepare messages for AI
-      const allMessages = [...messages, userMessage].map((msg) => ({
-        role: msg.role,
-        content: msg.content,
-      }));
-
-      // Add system message for pet care context
-      const systemMessage = {
-        role: "system",
-        content: `You are PetAssistent, a helpful AI assistant specialized in pet care. You provide accurate, caring advice about pet health, behavior, nutrition, and general care. Always recommend consulting a veterinarian for serious health concerns. Be friendly, empathetic, and informative. If asked about something outside of pet care, politely redirect the conversation back to pets.`,
-      };
-
-      const aiResponse = await fetch(
-        "/integrations/chat-gpt/conversationgpt4",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            messages: [systemMessage, ...allMessages],
-            stream: true,
-          }),
-        },
-      );
-
-      if (!aiResponse.ok) {
-        throw new Error("Failed to get AI response");
-      }
-
-      handleStreamResponse(aiResponse);
-    } catch (error) {
-      console.error("Error sending message:", error);
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: "Sorry, I encountered an error. Please try again.",
-          id: Date.now(),
-        },
-      ]);
-      setIsLoading(false);
-    }
+        
+        setMessages((prev) => [
+            ...prev,
+            { role: "assistant", content: responseText, id: Date.now() + 1 },
+        ]);
+        setIsLoading(false);
+    }, 1500);
   };
 
   const handleKeyPress = (e) => {
@@ -155,7 +109,7 @@ function MainComponent() {
           <div className="flex items-center justify-between py-4">
             <div className="flex items-center gap-4">
               <button
-                onClick={() => (window.location.href = "/dashboard")}
+                onClick={() => navigate("/dashboard")}
                 className="text-gray-600 hover:text-gray-800 p-2 rounded-lg hover:bg-gray-100 transition-colors"
               >
                 <ArrowLeft className="w-5 h-5" />
@@ -169,7 +123,7 @@ function MainComponent() {
                     AI Pet Assistant
                   </h1>
                   <p className="text-sm text-gray-600">
-                    Get expert pet care advice
+                    Get expert pet care advice (Demo Mode)
                   </p>
                 </div>
               </div>
@@ -188,7 +142,7 @@ function MainComponent() {
         <div className="bg-white rounded-xl shadow-lg border border-gray-100 h-full flex flex-col">
           {/* Messages Area */}
           <div className="flex-1 p-6 overflow-y-auto">
-            {messages.length === 0 && !streamingMessage && (
+            {messages.length === 0 && (
               <div className="text-center py-12">
                 <div className="bg-blue-100 p-4 rounded-full w-fit mx-auto mb-4">
                   <Bot className="w-12 h-12 text-blue-600" />
@@ -197,52 +151,8 @@ function MainComponent() {
                   Welcome to PetAssistent AI!
                 </h3>
                 <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                  I'm here to help with all your pet care questions. Ask me
-                  about health, behavior, nutrition, training, or anything else
-                  about your furry friends!
+                  I'm here to help with all your pet care questions.
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl mx-auto">
-                  <button
-                    onClick={() =>
-                      setInputMessage("Is chocolate toxic to dogs?")
-                    }
-                    className="p-3 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    <p className="text-sm font-medium text-gray-800">
-                      Is chocolate toxic to dogs?
-                    </p>
-                  </button>
-                  <button
-                    onClick={() =>
-                      setInputMessage("Why is my cat meowing at night?")
-                    }
-                    className="p-3 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    <p className="text-sm font-medium text-gray-800">
-                      Why is my cat meowing at night?
-                    </p>
-                  </button>
-                  <button
-                    onClick={() =>
-                      setInputMessage("How often should I feed my puppy?")
-                    }
-                    className="p-3 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    <p className="text-sm font-medium text-gray-800">
-                      How often should I feed my puppy?
-                    </p>
-                  </button>
-                  <button
-                    onClick={() =>
-                      setInputMessage("What are signs of illness in pets?")
-                    }
-                    className="p-3 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    <p className="text-sm font-medium text-gray-800">
-                      What are signs of illness in pets?
-                    </p>
-                  </button>
-                </div>
               </div>
             )}
 
@@ -274,31 +184,7 @@ function MainComponent() {
                 </div>
               ))}
 
-              {/* Streaming Message */}
-              {streamingMessage && (
-                <div className="flex gap-3 justify-start">
-                  <div className="bg-blue-100 p-2 rounded-full h-fit">
-                    <Bot className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div className="max-w-[80%] p-4 rounded-2xl bg-gray-100 text-gray-800">
-                    <p className="whitespace-pre-wrap">{streamingMessage}</p>
-                    <div className="flex items-center gap-1 mt-2">
-                      <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
-                      <div
-                        className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"
-                        style={{ animationDelay: "0.2s" }}
-                      ></div>
-                      <div
-                        className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"
-                        style={{ animationDelay: "0.4s" }}
-                      ></div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Loading indicator */}
-              {isLoading && !streamingMessage && (
+              {isLoading && (
                 <div className="flex gap-3 justify-start">
                   <div className="bg-blue-100 p-2 rounded-full h-fit">
                     <Bot className="w-5 h-5 text-blue-600" />
@@ -340,10 +226,6 @@ function MainComponent() {
                 )}
               </button>
             </div>
-            <p className="text-xs text-gray-500 mt-2 text-center">
-              PetAssistent AI can make mistakes. Always consult a veterinarian
-              for serious health concerns.
-            </p>
           </div>
         </div>
       </div>

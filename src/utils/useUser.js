@@ -1,35 +1,30 @@
-import * as React from 'react';
-import { useSession } from "@auth/react";
-
+import { useRouteLoaderData, useRevalidator } from "react-router";
 
 const useUser = () => {
-  const { data: session, status } = useSession();
-  const id = session?.user?.id
+  const rootData = useRouteLoaderData("root");
+  const revalidator = useRevalidator();
 
-  const [user, setUser] = React.useState(session?.user ?? null);
+  // --- MODIFICARE PENTRU TESTARE ---
+  // Simulăm un utilizator conectat ca să poți vedea Dashboard-ul
+  const mockUser = {
+    id: "user_123",
+    name: "Alex PetOwner",
+    email: "alex@example.com",
+    image: null
+  };
 
-  const fetchUser = React.useCallback(async (session) => {
-  return session?.user;
-}, [])
+  // În mod normal aici ar fi: const user = rootData?.user;
+  // Dar pentru test, folosim mockUser:
+  const user = mockUser; 
 
-  const refetchUser = React.useCallback(() => {
-    if(process.env.NEXT_PUBLIC_CREATE_ENV === "PRODUCTION") {
-      if (id) {
-        fetchUser(session).then(setUser);
-      } else {
-        setUser(null);
-      }
-    }
-  }, [fetchUser, id])
-
-  React.useEffect(refetchUser, [refetchUser]);
-
-  if (process.env.NEXT_PUBLIC_CREATE_ENV !== "PRODUCTION") {
-    return { user, data: session?.user || null, loading: status === 'loading', refetch: refetchUser };
-  }
-  return { user, data: user, loading: status === 'loading' || (status === 'authenticated' && !user), refetch: refetchUser };
+  return { 
+    user, 
+    data: user, 
+    loading: false, 
+    isAuthenticated: !!user,
+    refetch: revalidator.revalidate 
+  };
 };
 
-export { useUser }
-
+export { useUser };
 export default useUser;

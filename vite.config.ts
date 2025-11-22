@@ -1,30 +1,23 @@
-import path from "node:path";
+import { reactRouter } from "@react-router/dev/vite";
 import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
-import { reactRouter } from "@react-router/dev/vite";
-import { reactRouterHonoServer } from "react-router-hono-server/dev";
-import { windowsRouteImportFix } from "./vite-patch.js";
+// Importăm patch-ul pe care l-am creat pentru Windows
+import { windowsRouteImportFix } from "./vite-patch";
 
 export default defineConfig({
-  envPrefix: "NEXT_PUBLIC_",
   plugins: [
+    // 1. Aplicăm patch-ul pentru Windows (sigur și curat)
     windowsRouteImportFix(),
-    tsconfigPaths(),
+    
+    // 2. Plugin-ul esențial React Router (asta căuta eroarea ta!)
     reactRouter(),
-    reactRouterHonoServer({
-      serverEntryPoint: "./__create/index.ts",
-      runtime: "node"
-    })
+    
+    // 3. Plugin pentru path-uri din tsconfig (ex: @/...)
+    tsconfigPaths(),
   ],
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "src")
-    },
-    dedupe: ["react", "react-dom"]
-  },
-  server: {
-    host: "0.0.0.0",
-    port: 4000,
-    hmr: { overlay: false }
+  // Opțional: Optimizări pentru build
+  build: {
+    cssMinify: true,
+    ssr: true,
   }
 });
