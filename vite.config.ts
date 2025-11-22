@@ -1,21 +1,15 @@
 import { reactRouter } from "@react-router/dev/vite";
 import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
-// Importăm patch-ul pe care l-am creat pentru Windows
-import { windowsRouteImportFix } from "./vite-patch";
 
 export default defineConfig({
   plugins: [
-    // 1. Aplicăm patch-ul pentru Windows (sigur și curat)
-    windowsRouteImportFix(),
-    
-    // 2. Plugin-ul esențial React Router (asta căuta eroarea ta!)
+    // Pe server (Linux) nu avem nevoie de fix-ul pentru Windows.
+    // Lăsăm doar pluginurile esențiale.
     reactRouter(),
-    
-    // 3. Plugin pentru path-uri din tsconfig (ex: @/...)
     tsconfigPaths(),
   ],
-  // Opțional: Optimizări pentru build
+  // Asigurăm că build-ul e optimizat
   build: {
     cssMinify: true,
     ssr: true,
