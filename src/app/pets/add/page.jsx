@@ -1,311 +1,186 @@
-"use client";
-
 import { useState } from "react";
-import useUser from "../../../utils/useUser"; // ✅ TREI nivele: ../../../
-import useUpload from "../../../utils/useUpload"; // ✅ TREI nivele: ../../../
-import { useNavigate } from "react-router";
-import {
-  PawPrint,
-  ArrowLeft,
-  Camera,
-  Upload,
-  Save,
-  Loader2,
-} from "lucide-react";
+import { Form, redirect, useNavigation, useActionData, useNavigate } from "react-router";
+import { ArrowLeft, Camera, Plus, PawPrint, AlertCircle, Activity } from "lucide-react";
+import sql from "../../api/utils/sql";
 
-function MainComponent() {
-  const { data: user, loading: userLoading } = useUser();
-  const [upload, { loading: uploadLoading }] = useUpload();
+export async function action({ request }) {
+  const formData = await request.formData();
+  
+  const name = formData.get("name");
+  const breed = formData.get("breed");
+  const age = formData.get("birth_date");
+  const weight = formData.get("weight");
+  const details = formData.get("details");
+  const allergies = formData.get("allergies"); // Câmp Nou
+  const activity_level = formData.get("activity_level"); // Câmp Nou
+  const chip_number = formData.get("chip_number"); // Câmp Nou
+  const photoFile = formData.get("photo");
+
+  // Setăm default species (poți adăuga selector dacă vrei, momentan e dog pt simplitate în exemplu)
+  const species = formData.get("species") || "dog"; 
+
+  if (!name) return { error: "Pet Name is required!" };
+
+  let image_url = null;
+
+  if (photoFile && photoFile.size > 0) {
+    if (photoFile.size > 2000000) return { error: "Photo too large (max 2MB)." };
+    const arrayBuffer = await photoFile.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const base64 = buffer.toString('base64');
+    image_url = `data:${photoFile.type};base64,${base64}`;
+  }
+
+  try {
+    await sql`
+      INSERT INTO pets (owner_id, name, species, breed, weight, birth_date, details, allergies, activity_level, chip_number, image_url)
+      VALUES ('demo_user', ${name}, ${species}, ${breed}, ${weight}, ${age}, ${details}, ${allergies}, ${activity_level}, ${chip_number}, ${image_url})
+    `;
+    return redirect("/dashboard"); 
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+export default function AddPetPage() {
+  const navigation = useNavigation();
+  const actionData = useActionData();
   const navigate = useNavigate();
+  const isSubmitting = navigation.state === "submitting";
+  const [preview, setPreview] = useState(null);
 
-  const [formData, setFormData] = useState({
-    name: "",
-    breed: "",
-    age: "",
-    weight: "",
-    medical_notes: "",
-  });
-  const [photoFile, setPhotoFile] = useState(null);
-  const [photoPreview, setPhotoPreview] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState(null);
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handlePhotoChange = (e) => {
+  const handleImageChange = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setPhotoFile(file);
-      const reader = new FileReader();
-      reader.onload = (e) => setPhotoPreview(e.target.result);
-      reader.readAsDataURL(file);
-    }
+    if (file) setPreview(URL.createObjectURL(file));
   };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError(null);
-    setIsSubmitting(true);
-
-    try {
-      if (!formData.name.trim()) {
-        throw new Error("Pet name is required");
-      }
-
-      let photoUrl = null;
-
-      if (photoFile) {
-        const uploadResult = await upload({
-          reactNativeAsset: {
-            file: photoFile,
-            name: photoFile.name,
-            mimeType: photoFile.type,
-          },
-        });
-
-        if (uploadResult.error) {
-          throw new Error(uploadResult.error);
-        }
-
-        photoUrl = uploadResult.url;
-      }
-
-      const response = await fetch("/api/pets", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: formData.name.trim(),
-          breed: formData.breed.trim() || null,
-          age: formData.age ? parseInt(formData.age) : null,
-          weight: formData.weight ? parseFloat(formData.weight) : null,
-          photo_url: photoUrl,
-          medical_notes: formData.medical_notes.trim() || null,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to add pet");
-      }
-
-      navigate("/dashboard");
-    } catch (err) {
-      console.error("Error adding pet:", err);
-      setError(err.message);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  if (userLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    if (typeof window !== "undefined") {
-      window.location.href = "/account/signin";
-    }
-    return null;
-  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50">
+    <div className="min-h-screen bg-gray-50 p-6 font-sans text-gray-600">
+      
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-4">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate("/dashboard")}
-                className="text-gray-600 hover:text-gray-800 p-2 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <div className="flex items-center gap-2">
-                <div className="bg-green-100 p-2 rounded-full">
-                  <PawPrint className="w-6 h-6 text-green-600" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold text-gray-800">
-                    Add New Pet
-                  </h1>
-                  <p className="text-sm text-gray-600">
-                    Register your furry friend
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+      <div className="max-w-3xl mx-auto mb-6 flex items-center gap-4">
+        <button onClick={() => navigate("/dashboard")} className="text-gray-400 hover:text-gray-600 transition">
+            <ArrowLeft size={20} />
+        </button>
+        <div className="bg-green-100 p-2 rounded-full text-green-600">
+            <PawPrint size={24} />
         </div>
-      </header>
+        <div>
+            <h1 className="text-xl font-bold text-gray-900">Add New Pet</h1>
+            <p className="text-xs text-gray-500">Create a Gold Profile for better AI advice</p>
+        </div>
+      </div>
 
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <form
-          onSubmit={handleSubmit}
-          className="bg-white rounded-xl shadow-lg border border-gray-100 p-8"
-        >
-          {/* Photo Upload */}
-          <div className="mb-8">
-            <label className="block text-sm font-medium text-gray-700 mb-4">
-              Pet Photo (Optional)
-            </label>
-            <div className="flex flex-col items-center">
-              <div className="w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center mb-4 overflow-hidden">
-                {photoPreview ? (
-                  <img
-                    src={photoPreview}
-                    alt="Pet preview"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <Camera className="w-12 h-12 text-gray-400" />
-                )}
-              </div>
-              <label className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg cursor-pointer transition-colors flex items-center gap-2">
-                <Upload className="w-4 h-4" />
-                Choose Photo
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handlePhotoChange}
-                  className="hidden"
-                />
-              </label>
+      <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+        
+        {actionData?.error && (
+            <div className="mb-6 bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm flex items-center gap-2">
+              <AlertCircle size={16} /> {actionData.error}
+            </div>
+        )}
+
+        <Form method="post" encType="multipart/form-data">
+          
+          {/* Photo Area */}
+          <div className="flex flex-col items-center mb-8">
+            <div className="relative group">
+                <div className="w-32 h-32 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden border-4 border-white shadow-sm">
+                    {preview ? (
+                        <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                        <Camera size={40} className="text-gray-300" />
+                    )}
+                </div>
+                <label className="mt-4 inline-flex items-center px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 cursor-pointer transition shadow-sm">
+                    <span className="mr-2">📷</span> Choose Photo
+                    <input type="file" name="photo" className="hidden" accept="image/*" onChange={handleImageChange} />
+                </label>
             </div>
           </div>
 
-          {/* Pet Information */}
+          {/* BASIC INFO */}
+          <h3 className="text-sm font-bold text-gray-900 mb-4 border-b border-gray-100 pb-2">Basic Information</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Pet Name *
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                required
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-colors"
-                placeholder="Enter your pet's name"
-              />
+              <label className="block text-xs font-bold text-gray-700 mb-1">Pet Name *</label>
+              <input type="text" name="name" className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50/50" placeholder="Rex" />
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Breed
-              </label>
-              <input
-                type="text"
-                name="breed"
-                value={formData.breed}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-colors"
-                placeholder="e.g., Golden Retriever, Persian Cat"
-              />
+              <label className="block text-xs font-bold text-gray-700 mb-1">Species</label>
+              <select name="species" className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50/50">
+                  <option value="dog">Dog</option>
+                  <option value="cat">Cat</option>
+                  <option value="bird">Bird</option>
+              </select>
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Age (years)
-              </label>
-              <input
-                type="number"
-                name="age"
-                value={formData.age}
-                onChange={handleInputChange}
-                min="0"
-                max="30"
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-colors"
-                placeholder="Age in years"
-              />
+              <label className="block text-xs font-bold text-gray-700 mb-1">Breed</label>
+              <input type="text" name="breed" className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50/50" placeholder="e.g. Labrador" />
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Weight (lbs)
-              </label>
-              <input
-                type="number"
-                name="weight"
-                value={formData.weight}
-                onChange={handleInputChange}
-                min="0"
-                step="0.1"
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-colors"
-                placeholder="Weight in pounds"
-              />
+              <label className="block text-xs font-bold text-gray-700 mb-1">Date of Birth</label>
+              <input type="date" name="birth_date" className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50/50 text-gray-600" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Weight (kg)</label>
+              <input type="number" step="0.1" name="weight" className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50/50" placeholder="0.0" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Microchip No. (Optional)</label>
+              <input type="text" name="chip_number" className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50/50" placeholder="123456789" />
             </div>
           </div>
 
-          {/* Medical Notes */}
-          <div className="mb-8">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Medical Notes
-            </label>
-            <textarea
-              name="medical_notes"
-              value={formData.medical_notes}
-              onChange={handleInputChange}
-              rows="4"
-              className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-colors resize-none"
-              placeholder="Any medical conditions, allergies, or special notes about your pet..."
-            />
+          {/* MEDICAL & AI INFO (GOLD FEATURES) */}
+          <h3 className="text-sm font-bold text-gray-900 mb-4 border-b border-gray-100 pb-2 flex items-center gap-2">
+             <Activity size={16} className="text-orange-500" /> Health & AI Profile
+          </h3>
+          <div className="grid grid-cols-1 gap-6 mb-8">
+             <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Allergies (Crucial for Food Scan)</label>
+                <input type="text" name="allergies" className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-red-500 outline-none bg-red-50/30 placeholder-red-300" placeholder="e.g. Chicken, Beef, Pollen" />
+             </div>
+             
+             <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Activity Level (Crucial for Toys/Diet)</label>
+                <div className="grid grid-cols-3 gap-3">
+                    <label className="cursor-pointer">
+                        <input type="radio" name="activity_level" value="low" className="peer hidden" />
+                        <div className="border border-gray-200 rounded-lg p-3 text-center text-xs hover:bg-gray-50 peer-checked:bg-blue-50 peer-checked:border-blue-500 peer-checked:text-blue-700 transition">
+                            🛋️ Low / Lazy
+                        </div>
+                    </label>
+                    <label className="cursor-pointer">
+                        <input type="radio" name="activity_level" value="medium" className="peer hidden" defaultChecked />
+                        <div className="border border-gray-200 rounded-lg p-3 text-center text-xs hover:bg-gray-50 peer-checked:bg-green-50 peer-checked:border-green-500 peer-checked:text-green-700 transition">
+                            🐕 Normal
+                        </div>
+                    </label>
+                    <label className="cursor-pointer">
+                        <input type="radio" name="activity_level" value="high" className="peer hidden" />
+                        <div className="border border-gray-200 rounded-lg p-3 text-center text-xs hover:bg-gray-50 peer-checked:bg-orange-50 peer-checked:border-orange-500 peer-checked:text-orange-700 transition">
+                            ⚡ Hyper / Active
+                        </div>
+                    </label>
+                </div>
+             </div>
+
+             <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Medical Notes</label>
+                <textarea name="details" rows="3" className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50/50 placeholder-gray-400 resize-none" placeholder="History of surgeries, chronic illness..."></textarea>
+             </div>
           </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-red-600 text-sm">{error}</p>
-            </div>
-          )}
-
-          {/* Submit Button */}
-          <div className="flex gap-4">
-            <button
-              type="button"
-              onClick={() => navigate("/dashboard")}
-              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-6 rounded-lg font-medium transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting || uploadLoading}
-              className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white py-3 px-6 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-            >
-              {isSubmitting || uploadLoading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  {uploadLoading ? "Uploading..." : "Saving..."}
-                </>
-              ) : (
-                <>
-                  <Save className="w-5 h-5" />
-                  Add Pet
-                </>
-              )}
-            </button>
+          {/* Actions */}
+          <div className="flex justify-between items-center pt-4 border-t border-gray-50">
+             <button type="button" onClick={() => navigate("/dashboard")} className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium rounded-lg text-sm transition">Cancel</button>
+             <button type="submit" disabled={isSubmitting} className="px-8 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg text-sm shadow-lg shadow-green-200 flex items-center gap-2 transition transform hover:-translate-y-0.5 disabled:opacity-70">
+               {isSubmitting ? "Saving..." : <><Plus size={18} /> Save Gold Profile</>}
+             </button>
           </div>
-        </form>
+
+        </Form>
       </div>
     </div>
   );
 }
-
-export default MainComponent;
