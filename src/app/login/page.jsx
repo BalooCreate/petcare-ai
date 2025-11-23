@@ -12,7 +12,6 @@ export async function action({ request }) {
   if (!email || !password) return { error: "Please enter email and password!" };
 
   try {
-    // 1. Check credentials
     const users = await sql`SELECT * FROM users WHERE email = ${email} AND password = ${password}`;
     
     if (users.length === 0) {
@@ -20,6 +19,13 @@ export async function action({ request }) {
     }
 
     const user = users[0];
+
+    // AICI E SCHIMBAREA: Setăm Cookie-ul cu ID-ul utilizatorului
+    return redirect("/dashboard", {
+      headers: {
+        "Set-Cookie": `user_id=${user.id}; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400`,
+      },
+    });
 
     // 2. SUCCESS -> Redirect to Dashboard
     return redirect("/dashboard"); 

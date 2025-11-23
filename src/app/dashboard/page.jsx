@@ -6,9 +6,23 @@ import {
 import sql from "../api/utils/sql"; 
 
 // --- BACKEND ---
-export async function loader() {
+export async function loader({ request }) {
   try {
-    const pets = await sql`SELECT * FROM pets ORDER BY created_at DESC`;
+    // 1. Citim ID-ul din Cookie
+    const cookieHeader = request.headers.get("Cookie");
+    const userIdMatch = cookieHeader?.match(/user_id=([^;]+)/);
+    const userId = userIdMatch ? userIdMatch[1] : null;
+
+    // Dacă nu e logat, îl trimitem la Login
+    if (!userId) return redirect("/login");
+
+    // 2. Luăm DOAR animalele acestui utilizator (WHERE owner_id = userId)
+    const pets = await sql`
+      SELECT * FROM pets 
+      WHERE owner_id = ${userId} 
+      ORDER BY created_at DESC
+    `;
+    
     return { pets };
   } catch (err) {
     return { pets: [] };

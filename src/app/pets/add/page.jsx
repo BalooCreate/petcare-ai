@@ -4,6 +4,13 @@ import { ArrowLeft, Camera, Plus, PawPrint, AlertCircle, Activity } from "lucide
 import sql from "../../api/utils/sql";
 
 export async function action({ request }) {
+  // 1. Aflăm cine e logat
+  const cookieHeader = request.headers.get("Cookie");
+  const userIdMatch = cookieHeader?.match(/user_id=([^;]+)/);
+  const userId = userIdMatch ? userIdMatch[1] : null;
+
+  if (!userId) return redirect("/login"); // Protecție
+
   const formData = await request.formData();
   
   const name = formData.get("name");
@@ -11,12 +18,10 @@ export async function action({ request }) {
   const age = formData.get("birth_date");
   const weight = formData.get("weight");
   const details = formData.get("details");
-  const allergies = formData.get("allergies"); // Câmp Nou
-  const activity_level = formData.get("activity_level"); // Câmp Nou
-  const chip_number = formData.get("chip_number"); // Câmp Nou
+  const allergies = formData.get("allergies");
+  const activity_level = formData.get("activity_level");
+  const chip_number = formData.get("chip_number");
   const photoFile = formData.get("photo");
-
-  // Setăm default species (poți adăuga selector dacă vrei, momentan e dog pt simplitate în exemplu)
   const species = formData.get("species") || "dog"; 
 
   if (!name) return { error: "Pet Name is required!" };
@@ -32,9 +37,10 @@ export async function action({ request }) {
   }
 
   try {
+    // 2. Salvăm cu owner_id = userId (NU 'demo_user')
     await sql`
       INSERT INTO pets (owner_id, name, species, breed, weight, birth_date, details, allergies, activity_level, chip_number, image_url)
-      VALUES ('demo_user', ${name}, ${species}, ${breed}, ${weight}, ${age}, ${details}, ${allergies}, ${activity_level}, ${chip_number}, ${image_url})
+      VALUES (${userId}, ${name}, ${species}, ${breed}, ${weight}, ${age}, ${details}, ${allergies}, ${activity_level}, ${chip_number}, ${image_url})
     `;
     return redirect("/dashboard"); 
   } catch (err) {
