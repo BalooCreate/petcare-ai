@@ -2,11 +2,11 @@
   "name": "web-petcare-ai",
   "private": true,
   "type": "module",
-  "scripts": {
+ "scripts": {
     "dev": "react-router dev",
     "build": "react-router build",
     "preview": "react-router serve",
-    "start": "react-router serve",
+    "start": "react-router-serve build/server/index.js",
     "typecheck": "react-router typegen && tsc --noEmit"
   },
   "dependencies": {
