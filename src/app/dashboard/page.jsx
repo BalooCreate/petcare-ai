@@ -1,7 +1,7 @@
 import { useLoaderData, Link, useNavigate, redirect } from "react-router";
 import { 
   Plus, Calendar, Activity, MessageCircle, 
-  Clock, PawPrint, FileText, Camera, AlertCircle 
+  Clock, PawPrint, FileText, Camera 
 } from "lucide-react";
 import sql from "../api/utils/sql"; 
 
@@ -22,9 +22,7 @@ export async function loader({ request }) {
       ORDER BY created_at DESC
     `;
 
-    // 3. Luăm programările (Schedules) - Conectăm tabelul creat anterior
-    // Notă: Momentan le luăm pe toate cele recente (pentru demo), 
-    // ideal ar fi să le filtrăm și pe acestea după user_id în viitor.
+    // 3. Luăm programările (Schedules)
     const schedules = await sql`
         SELECT * FROM schedules 
         ORDER BY date ASC 
@@ -45,7 +43,7 @@ function getAge(dateString) {
   let age = today.getFullYear() - birthDate.getFullYear();
   const m = today.getMonth() - birthDate.getMonth();
   if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
-  return age > 0 ? `${age} years` : "Baby";
+  return age > 0 ? `${age} years old` : "Baby";
 }
 
 // --- FRONTEND ---
@@ -100,13 +98,13 @@ export default function DashboardPage() {
                 <p className="text-[10px] text-gray-400 mt-0.5">Vets & Vaccines</p>
             </Link>
 
-            <div onClick={comingSoon} className="bg-white p-4 rounded-xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex flex-col items-center text-center hover:shadow-md transition cursor-pointer hover:-translate-y-0.5">
+            <Link to="/health" className="bg-white p-4 rounded-xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex flex-col items-center text-center hover:shadow-md transition cursor-pointer hover:-translate-y-0.5">
                 <div className="bg-purple-50 text-purple-600 p-2.5 rounded-full mb-2">
                     <Activity size={20} />
                 </div>
                 <h3 className="text-sm font-bold text-gray-900">Health Log</h3>
                 <p className="text-[10px] text-gray-400 mt-0.5">Records</p>
-            </div>
+            </Link>
 
             <Link to="/scan" className="bg-white p-4 rounded-xl border border-orange-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex flex-col items-center text-center hover:shadow-md transition cursor-pointer hover:-translate-y-0.5 ring-1 ring-orange-50">
                 <div className="bg-orange-50 text-orange-600 p-2.5 rounded-full mb-2">
