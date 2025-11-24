@@ -1,8 +1,8 @@
-import { useLoaderData, Link } from "react-router";
-import { ArrowLeft, Weight, Calendar, PawPrint, FileText, Activity, AlertTriangle, Zap, Hash } from "lucide-react";
+import { useLoaderData, Link, Form, redirect } from "react-router";
+import { ArrowLeft, Weight, Calendar, PawPrint, FileText, Activity, Trash2, AlertTriangle, Zap, Hash } from "lucide-react";
 import sql from "../../api/utils/sql"; 
 
-// --- BACKEND ---
+// --- BACKEND: Loader & Action ---
 export async function loader({ params }) {
   try {
     const petId = params.id;
@@ -11,6 +11,19 @@ export async function loader({ params }) {
     return { pet: result[0] };
   } catch (err) {
     throw new Response("Pet not found", { status: 404 });
+  }
+}
+
+// AICI ESTE LOGICA DE ȘTERGERE
+export async function action({ params, request }) {
+  const formData = await request.formData();
+  const intent = formData.get("intent");
+
+  if (intent === "delete") {
+    const petId = params.id;
+    await sql`DELETE FROM pets WHERE id = ${petId}`;
+    // După ștergere, ne întoarcem la Dashboard
+    return redirect("/dashboard");
   }
 }
 
@@ -27,6 +40,13 @@ function getAge(dateString) {
 // --- FRONTEND ---
 export default function PetProfilePage() {
   const { pet } = useLoaderData();
+
+  const handleDelete = (e) => {
+    const confirmDelete = window.confirm("Are you sure you want to remove this pet? This cannot be undone.");
+    if (!confirmDelete) {
+      e.preventDefault(); // Oprim ștergerea dacă utilizatorul zice Cancel
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 font-sans text-gray-800 flex justify-center">
@@ -63,31 +83,33 @@ export default function PetProfilePage() {
 
                     <div className="w-full space-y-4 text-left bg-gray-50 p-5 rounded-xl border border-gray-100">
                         <div className="flex justify-between items-center">
-                            <span className="text-gray-400 text-xs uppercase font-bold flex items-center gap-2">
-                                Breed
-                            </span>
+                            <span className="text-gray-400 text-xs uppercase font-bold flex items-center gap-2">Breed</span>
                             <span className="font-bold text-gray-700">{pet.breed || "-"}</span>
                         </div>
                         <div className="flex justify-between items-center">
-                            <span className="text-gray-400 text-xs uppercase font-bold flex items-center gap-2">
-                                Weight
-                            </span>
+                            <span className="text-gray-400 text-xs uppercase font-bold flex items-center gap-2">Weight</span>
                             <span className="font-bold text-gray-700">{pet.weight} kg</span>
                         </div>
                         <div className="flex justify-between items-center">
-                            <span className="text-gray-400 text-xs uppercase font-bold flex items-center gap-2">
-                                Age
-                            </span>
+                            <span className="text-gray-400 text-xs uppercase font-bold flex items-center gap-2">Age</span>
                             <span className="font-bold text-gray-700">{getAge(pet.birth_date)}</span>
                         </div>
                     </div>
+
+                    {/* DELETE BUTTON (Design Nou) */}
+                    <Form method="post" onSubmit={handleDelete} className="w-full mt-6">
+                        <input type="hidden" name="intent" value="delete" />
+                        <button type="submit" className="w-full flex items-center justify-center gap-2 text-red-500 hover:text-red-700 text-sm font-bold py-3 hover:bg-red-50 rounded-xl transition">
+                            <Trash2 size={16} /> Remove Profile
+                        </button>
+                    </Form>
                 </div>
             </div>
 
-            {/* COL 2: HEALTH & GOLD INFO */}
+            {/* COL 2: DETAILS */}
             <div className="lg:col-span-2 space-y-6">
                 
-                {/* CARD 1: ALERGII & SAFETY (CRITIC PENTRU GOLD) */}
+                {/* CARD: SAFETY INFO */}
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                     <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-red-50">
                         <h2 className="text-lg font-bold text-red-800 flex items-center gap-2">
@@ -96,7 +118,6 @@ export default function PetProfilePage() {
                         <span className="bg-white text-red-600 text-[10px] font-bold px-2 py-1 rounded border border-red-100 uppercase">Important</span>
                     </div>
                     <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Alergii */}
                         <div>
                             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 block">Known Allergies</label>
                             {pet.allergies ? (
@@ -107,7 +128,6 @@ export default function PetProfilePage() {
                                 <p className="text-gray-400 italic bg-gray-50 p-3 rounded-lg">No known allergies.</p>
                             )}
                         </div>
-                        {/* Microcip */}
                         <div>
                             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 block">Microchip Number</label>
                             <p className="text-gray-700 font-mono bg-gray-50 p-3 rounded-lg border border-gray-200 flex items-center gap-2">
@@ -118,7 +138,7 @@ export default function PetProfilePage() {
                     </div>
                 </div>
 
-                {/* CARD 2: LIFESTYLE & NOTES */}
+                {/* CARD: LIFESTYLE */}
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                     <div className="mb-6 flex items-center gap-4">
                         <div className="flex-1">
@@ -153,7 +173,7 @@ export default function PetProfilePage() {
                     </div>
                 </div>
 
-                {/* CARD 3: VACCINES (Placeholder) */}
+                {/* CARD: VACCINES */}
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 opacity-60 hover:opacity-100 transition">
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
