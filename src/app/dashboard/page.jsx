@@ -1,7 +1,7 @@
 import { useLoaderData, Link, useNavigate, redirect } from "react-router";
 import { 
   Plus, Calendar, Activity, MessageCircle, 
-  Clock, PawPrint, FileText, Camera 
+  Clock, PawPrint, FileText, Camera, Settings 
 } from "lucide-react";
 import sql from "../api/utils/sql"; 
 
@@ -13,26 +13,16 @@ export async function loader({ request }) {
     const userIdMatch = cookieHeader?.match(/user_id=([^;]+)/);
     const userId = userIdMatch ? userIdMatch[1] : null;
 
-    // Dacă nu e logat, trimitem la Login
     if (!userId) return redirect("/login");
 
-    // 2. Luăm animalele utilizatorului
-    const pets = await sql`
-      SELECT * FROM pets 
-      WHERE owner_id = ${userId} 
-      ORDER BY created_at DESC
-    `;
+    // 2. Luăm animalele
+    const pets = await sql`SELECT * FROM pets WHERE owner_id = ${userId} ORDER BY created_at DESC`;
 
-    // 3. Luăm programările (Schedules)
-    const schedules = await sql`
-        SELECT * FROM schedules 
-        ORDER BY date ASC 
-        LIMIT 3
-    `;
+    // 3. Luăm programările
+    const schedules = await sql`SELECT * FROM schedules ORDER BY date ASC LIMIT 3`;
 
     return { pets, schedules };
   } catch (err) {
-    console.error(err);
     return { pets: [], schedules: [] };
   }
 }
@@ -50,8 +40,6 @@ function getAge(dateString) {
 // --- FRONTEND ---
 export default function DashboardPage() {
   const { pets, schedules } = useLoaderData();
-
-  const comingSoon = () => alert("Feature coming soon!");
 
   return (
     <div className="min-h-screen bg-white p-6 font-sans text-gray-800 flex justify-center">
@@ -71,20 +59,22 @@ export default function DashboardPage() {
             </Link>
 
             <div className="flex items-center gap-3">
-                <span className="text-xs text-gray-400 hidden sm:inline">Welcome</span>
-                <button 
-                    onClick={comingSoon}
+                {/* BUTON SETĂRI (LOGOUT ESTE AICI) */}
+                <Link to="/settings" className="text-gray-400 hover:text-gray-600 flex items-center gap-1 text-xs font-medium bg-gray-50 px-3 py-1.5 rounded-lg transition">
+                    <Settings size={14} /> Settings
+                </Link>
+                
+                <Link 
+                    to="/chat"
                     className="bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-green-700 transition shadow-sm shadow-green-100"
                 >
                     <MessageCircle size={14} /> AI Chat
-                </button>
+                </Link>
             </div>
         </div>
 
         {/* QUICK ACTIONS */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            
-            {/* 1. Add Pet */}
             <Link to="/pets/add" className="bg-white p-4 rounded-xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex flex-col items-center text-center hover:shadow-md transition cursor-pointer group hover:-translate-y-0.5">
                 <div className="bg-green-50 text-green-600 p-2.5 rounded-full mb-2 group-hover:bg-green-100 transition">
                     <Plus size={20} />
@@ -93,7 +83,6 @@ export default function DashboardPage() {
                 <p className="text-[10px] text-gray-400 mt-0.5">Register new</p>
             </Link>
 
-            {/* 2. Schedules */}
             <Link to="/schedules" className="bg-white p-4 rounded-xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex flex-col items-center text-center hover:shadow-md transition cursor-pointer hover:-translate-y-0.5">
                 <div className="bg-blue-50 text-blue-600 p-2.5 rounded-full mb-2">
                     <Calendar size={20} />
@@ -102,7 +91,6 @@ export default function DashboardPage() {
                 <p className="text-[10px] text-gray-400 mt-0.5">Vets & Vaccines</p>
             </Link>
 
-            {/* 3. Health Log */}
             <Link to="/health" className="bg-white p-4 rounded-xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex flex-col items-center text-center hover:shadow-md transition cursor-pointer hover:-translate-y-0.5">
                 <div className="bg-purple-50 text-purple-600 p-2.5 rounded-full mb-2">
                     <Activity size={20} />
@@ -111,19 +99,20 @@ export default function DashboardPage() {
                 <p className="text-[10px] text-gray-400 mt-0.5">Records</p>
             </Link>
 
-            {/* 4. SMART SCAN (Modificat: Fără etichetă Gold) */}
-            <Link to="/scan" className="bg-white p-4 rounded-xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex flex-col items-center text-center hover:shadow-md transition cursor-pointer hover:-translate-y-0.5">
+            <Link to="/scan" className="bg-white p-4 rounded-xl border border-orange-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex flex-col items-center text-center hover:shadow-md transition cursor-pointer hover:-translate-y-0.5 ring-1 ring-orange-50">
                 <div className="bg-orange-50 text-orange-600 p-2.5 rounded-full mb-2">
                     <Camera size={20} />
                 </div>
-                <h3 className="text-sm font-bold text-gray-900">Smart Scan</h3>
+                <h3 className="text-sm font-bold text-gray-900 flex items-center gap-1">
+                    Smart Scan <span className="text-[8px] bg-orange-100 text-orange-600 px-1 rounded font-extrabold">GOLD</span>
+                </h3>
                 <p className="text-[10px] text-gray-400 mt-0.5">Food, Toys & Rx</p>
             </Link>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
-            {/* --- 1. My Pets List --- */}
+            {/* My Pets List */}
             <div className="bg-white rounded-xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-5 lg:col-span-1 h-fit">
                 <div className="flex justify-between items-center mb-4 border-b border-gray-50 pb-2">
                     <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
@@ -166,7 +155,7 @@ export default function DashboardPage() {
                 </div>
             </div>
 
-            {/* --- 2. Upcoming Care (REAL) --- */}
+            {/* Upcoming Care */}
             <div className="bg-white rounded-xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-5 lg:col-span-2">
                 <div className="flex justify-between items-center mb-4 border-b border-gray-50 pb-2">
                     <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
@@ -177,14 +166,12 @@ export default function DashboardPage() {
 
                 <div className="space-y-3">
                     {schedules.length === 0 ? (
-                        // Mesaj Gol dacă nu sunt programări
                         <div className="text-center py-8 text-gray-400 text-xs flex flex-col items-center">
                             <Calendar size={24} className="mb-2 text-gray-200" />
                             No upcoming tasks.<br/>
                             Go to "Schedules" to add one.
                         </div>
                     ) : (
-                        // Lista Programări Reale
                         schedules.map(item => (
                             <div key={item.id} className="flex items-center justify-between p-3 border border-gray-50 bg-[#F8F9FA] rounded-lg hover:border-blue-100 transition">
                                 <div className="flex items-center gap-3">
@@ -204,7 +191,7 @@ export default function DashboardPage() {
                     )}
                 </div>
 
-                {/* Recent Logs (Placeholder curat) */}
+                {/* Recent Logs */}
                 <div className="mt-6 pt-4 border-t border-gray-50">
                     <div className="flex justify-between items-center mb-2">
                         <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
