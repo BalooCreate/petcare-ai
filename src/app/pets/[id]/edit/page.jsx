@@ -1,5 +1,5 @@
 import { Form, useLoaderData, redirect, Link } from "react-router";
-import sql from "../../api/utils/sql"; // Verifică dacă calea e corectă!
+import sql from "../../../api/utils/sql"; // Verifică dacă calea e corectă!
 
 // 1. Încărcăm datele existente ca să le punem în formular
 export async function loader({ params }) {
