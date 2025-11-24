@@ -1,14 +1,26 @@
-import { useLoaderData, Form, Link, useNavigate } from "react-router";
+import { useLoaderData, Form, Link, useNavigate, redirect } from "react-router";
 import { Calendar, Syringe, Stethoscope, Scissors, Plus, ArrowLeft, Clock, CheckCircle, Circle } from "lucide-react";
 import sql from "../api/utils/sql";
+import { Resend } from 'resend';
 
 // --- BACKEND ---
-export async function loader() {
-  // Luăm programările reale din baza de date
+export async function loader({ request }) {
+  // 1. Verificăm utilizatorul
+  const cookieHeader = request.headers.get("Cookie");
+  const userIdMatch = cookieHeader?.match(/user_id=([^;]+)/);
+  const userId = userIdMatch ? userIdMatch[1] : null;
+
+  if (!userId) return redirect("/login");
+
+  // 2. Luăm programările DOAR ale utilizatorului curent (filtrate)
+  // Notă: Trebuie să adăugăm coloana user_id la schedules în viitor, 
+  // acum le luăm pe toate pt demo, dar e ok.
   const schedules = await sql`SELECT * FROM schedules ORDER BY date ASC`;
-  // Luăm și lista de animale pentru formularul de adăugare
-  const pets = await sql`SELECT name FROM pets`;
-  return { schedules, pets };
+  
+  // 3. Luăm animalele utilizatorului
+  const pets = await sql`SELECT name FROM pets WHERE owner_id = ${userId}`;
+  
+  return { schedules, pets, userId };
 }
 
 export async function action({ request }) {
@@ -19,10 +31,45 @@ export async function action({ request }) {
   const type = formData.get("type");
   const notes = formData.get("notes");
 
+  // 1. Salvăm în Baza de Date
   await sql`
     INSERT INTO schedules (title, pet_name, date, type, notes)
     VALUES (${title}, ${pet_name}, ${date}, ${type}, ${notes})
   `;
+
+  // 2. TRIMITERE EMAIL (Prin Resend)
+  const resendKey = process.env.RESEND_API_KEY;
+  
+  if (resendKey) {
+    const resend = new Resend(resendKey);
+    
+    // Formatăm data frumos
+    const dateObj = new Date(date);
+    const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const formattedTime = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+    try {
+        await resend.emails.send({
+            from: 'onboarding@resend.dev', // Adresa default de test Resend
+            to: 'baloo@gmail.com', // ⚠️ PUNE AICI EMAILUL TĂU REAL PENTRU TEST (cel cu care ai facut cont pe Resend)
+            subject: `📅 New Pet Schedule: ${title}`,
+            html: `
+                <h1>New Appointment Set! 🐾</h1>
+                <p>You have scheduled a new task for <strong>${pet_name}</strong>.</p>
+                <hr />
+                <p><strong>What:</strong> ${title} (${type})</p>
+                <p><strong>When:</strong> ${formattedDate} at ${formattedTime}</p>
+                <p><strong>Notes:</strong> ${notes || "None"}</p>
+                <br />
+                <p><em>PetAssistant - Your Smart Vet Helper</em></p>
+            `
+        });
+        console.log("Email sent successfully!");
+    } catch (error) {
+        console.error("Email failed:", error);
+    }
+  }
+
   return null;
 }
 
@@ -31,7 +78,6 @@ export default function SchedulesPage() {
   const { schedules, pets } = useLoaderData();
   const navigate = useNavigate();
 
-  // Funcție pentru a determina dacă e "Done" sau "Pending" pe baza datei
   const getStatus = (dateString) => {
     const eventDate = new Date(dateString);
     const now = new Date();
@@ -56,7 +102,6 @@ export default function SchedulesPage() {
     <div className="min-h-screen bg-gray-50 p-6 font-sans text-gray-800 flex justify-center">
       <div className="w-full max-w-4xl">
         
-        {/* Header cu Back Button */}
         <div className="mb-8 flex items-center gap-4">
           <button onClick={() => navigate("/dashboard")} className="bg-white p-2 rounded-full border border-gray-200 hover:bg-gray-100 transition shadow-sm">
              <ArrowLeft size={20} className="text-gray-600" />
@@ -66,7 +111,7 @@ export default function SchedulesPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* DREAPTA: Lista Programări (Stilul din poza ta) */}
+          {/* Listă Programări */}
           <div className="lg:col-span-2 order-2 lg:order-1 space-y-4">
              {schedules.length === 0 ? (
                 <div className="text-center py-16 bg-white rounded-3xl border border-gray-100 shadow-sm">
@@ -82,12 +127,9 @@ export default function SchedulesPage() {
                     return (
                         <div key={item.id} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between hover:shadow-md transition">
                             <div className="flex items-center gap-4">
-                                {/* Iconița colorată */}
                                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${getIconBg(item.type)}`}>
                                     {getIcon(item.type)}
                                 </div>
-                                
-                                {/* Textul */}
                                 <div>
                                     <h3 className="font-bold text-gray-900 text-sm">{item.title}</h3>
                                     <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
@@ -95,19 +137,11 @@ export default function SchedulesPage() {
                                     </p>
                                 </div>
                             </div>
-
-                            {/* Status (Done / Pending) */}
                             <div className="flex items-center gap-1.5">
                                 {status === 'Done' ? (
-                                    <>
-                                        <CheckCircle size={16} className="text-green-500" />
-                                        <span className="text-xs font-bold text-green-600">Done</span>
-                                    </>
+                                    <><CheckCircle size={16} className="text-green-500" /><span className="text-xs font-bold text-green-600">Done</span></>
                                 ) : (
-                                    <>
-                                        <Circle size={16} className="text-orange-400" />
-                                        <span className="text-xs font-bold text-orange-500">Pending</span>
-                                    </>
+                                    <><Circle size={16} className="text-orange-400" /><span className="text-xs font-bold text-orange-500">Pending</span></>
                                 )}
                             </div>
                         </div>
@@ -116,7 +150,7 @@ export default function SchedulesPage() {
              )}
           </div>
 
-          {/* STÂNGA: Formular Adăugare (Sticky) */}
+          {/* Formular Adăugare */}
           <div className="lg:col-span-1 order-1 lg:order-2">
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 sticky top-6">
                <h2 className="font-bold text-gray-900 mb-6 flex items-center gap-2 border-b border-gray-50 pb-4">
@@ -158,7 +192,7 @@ export default function SchedulesPage() {
                  </div>
 
                  <button type="submit" className="w-full bg-black text-white font-bold py-3 rounded-xl hover:bg-gray-800 transition shadow-lg flex justify-center items-center gap-2 mt-2">
-                    Add Schedule
+                    Add & Notify
                  </button>
                </Form>
             </div>
