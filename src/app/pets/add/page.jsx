@@ -9,7 +9,7 @@ export async function action({ request }) {
   const userIdMatch = cookieHeader?.match(/user_id=([^;]+)/);
   const userId = userIdMatch ? userIdMatch[1] : null;
 
-  if (!userId) return redirect("/login"); // Protecție
+  if (!userId) return redirect("/login"); 
 
   const formData = await request.formData();
   
@@ -37,7 +37,6 @@ export async function action({ request }) {
   }
 
   try {
-    // 2. Salvăm cu owner_id = userId (NU 'demo_user')
     await sql`
       INSERT INTO pets (owner_id, name, species, breed, weight, birth_date, details, allergies, activity_level, chip_number, image_url)
       VALUES (${userId}, ${name}, ${species}, ${breed}, ${weight}, ${age}, ${details}, ${allergies}, ${activity_level}, ${chip_number}, ${image_url})
@@ -73,7 +72,7 @@ export default function AddPetPage() {
         </div>
         <div>
             <h1 className="text-xl font-bold text-gray-900">Add New Pet</h1>
-            <p className="text-xs text-gray-500">Create a Gold Profile for better AI advice</p>
+            <p className="text-xs text-gray-500">Create a comprehensive profile for AI analysis</p>
         </div>
       </div>
 
@@ -137,7 +136,7 @@ export default function AddPetPage() {
             </div>
           </div>
 
-          {/* MEDICAL & AI INFO (GOLD FEATURES) */}
+          {/* MEDICAL & AI INFO */}
           <h3 className="text-sm font-bold text-gray-900 mb-4 border-b border-gray-100 pb-2 flex items-center gap-2">
              <Activity size={16} className="text-orange-500" /> Health & AI Profile
           </h3>
@@ -181,7 +180,8 @@ export default function AddPetPage() {
           <div className="flex justify-between items-center pt-4 border-t border-gray-50">
              <button type="button" onClick={() => navigate("/dashboard")} className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium rounded-lg text-sm transition">Cancel</button>
              <button type="submit" disabled={isSubmitting} className="px-8 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg text-sm shadow-lg shadow-green-200 flex items-center gap-2 transition transform hover:-translate-y-0.5 disabled:opacity-70">
-               {isSubmitting ? "Saving..." : <><Plus size={18} /> Save Gold Profile</>}
+               {/* AICI AM SCHIMBAT TEXTUL: */}
+               {isSubmitting ? "Saving..." : <><Plus size={18} /> Save Profile</>}
              </button>
           </div>
 
