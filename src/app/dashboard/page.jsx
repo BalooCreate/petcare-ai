@@ -114,14 +114,12 @@ export default function DashboardPage() {
                 <p className="text-[10px] text-gray-400 mt-0.5">Records</p>
             </Link>
 
-            {/* 4. SMART SCAN (GOLD) */}
-            <Link to="/scan" className="bg-white p-4 rounded-xl border border-orange-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex flex-col items-center text-center hover:shadow-md transition cursor-pointer hover:-translate-y-0.5 ring-1 ring-orange-50">
+            {/* 4. SMART SCAN (Clean Design - Fără etichetă Gold) */}
+            <Link to="/scan" className="bg-white p-4 rounded-xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex flex-col items-center text-center hover:shadow-md transition cursor-pointer hover:-translate-y-0.5">
                 <div className="bg-orange-50 text-orange-600 p-2.5 rounded-full mb-2">
                     <Camera size={20} />
                 </div>
-                <h3 className="text-sm font-bold text-gray-900 flex items-center gap-1">
-                    Smart Scan <span className="text-[8px] bg-orange-100 text-orange-600 px-1 rounded font-extrabold">GOLD</span>
-                </h3>
+                <h3 className="text-sm font-bold text-gray-900">Smart Scan</h3>
                 <p className="text-[10px] text-gray-400 mt-0.5">Food, Toys & Rx</p>
             </Link>
         </div>
