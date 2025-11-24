@@ -13,6 +13,7 @@ export async function loader({ request }) {
     const userIdMatch = cookieHeader?.match(/user_id=([^;]+)/);
     const userId = userIdMatch ? userIdMatch[1] : null;
 
+    // Dacă nu e logat, trimitem la Login
     if (!userId) return redirect("/login");
 
     // 2. Luăm animalele utilizatorului

@@ -1,236 +1,249 @@
-"use client";
-
 import { useState, useEffect, useRef } from "react";
-import useUser from "../../utils/useUser"; 
-import {
-  PawPrint,
-  Send,
-  MessageCircle,
-  ArrowLeft,
-  Bot,
-  User,
-  Loader2,
-} from "lucide-react";
-import { useNavigate } from "react-router";
+import { Form, useNavigation, useActionData, Link } from "react-router";
+import { ArrowLeft, Send, Image as ImageIcon, Bot, User, Loader2 } from "lucide-react";
 
-function MainComponent() {
-  const { data: user, loading: userLoading } = useUser();
-  const [messages, setMessages] = useState([]);
-  const [inputMessage, setInputMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+// --- BACKEND: Discuția cu OpenAI (Server-Side) ---
+export async function action({ request }) {
+  const formData = await request.formData();
+  const prompt = formData.get("prompt");
+  const imageFile = formData.get("image");
+
+  if (!prompt && !imageFile) return null;
+
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return { error: "Lipsă API Key! Configurează .env" };
+
+  // Construim mesajul pentru AI
+  let content = [{ type: "text", text: prompt || "Analizează această imagine." }];
+
+  // Dacă avem poză, o transformăm în Base64
+  if (imageFile && imageFile.size > 0) {
+    const arrayBuffer = await imageFile.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const base64Image = buffer.toString('base64');
+    const dataUrl = `data:${imageFile.type};base64,${base64Image}`;
+    
+    content.push({
+      type: "image_url",
+      image_url: { url: dataUrl }
+    });
+  }
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4o", // Model capabil de viziune (Vision)
+        messages: [
+          {
+            role: "system",
+            content: "Ești PetAssistant, un expert veterinar AI. Răspunzi scurt, empatic și profesionist. Dacă primești o poză, analizeaz-o vizual pentru simptome (piele, ochi, răni, produse). Nu da diagnostice definitive, ci sfaturi și recomandă vizita la medic dacă pare grav."
+          },
+          { role: "user", content: content }
+        ],
+        max_tokens: 300
+      })
+    });
+
+    const data = await response.json();
+    if (data.error) return { error: data.error.message };
+    
+    return { reply: data.choices[0].message.content };
+
+  } catch (err) {
+    return { error: "Eroare la conectarea cu AI." };
+  }
+}
+
+// --- FRONTEND: Interfața de Chat ---
+export default function ChatPage() {
+  const actionData = useActionData();
+  const navigation = useNavigation();
+  const isSending = navigation.state === "submitting";
+  
+  // State pentru mesaje
+  const [messages, setMessages] = useState([
+    { role: "ai", text: "Salut! Sunt asistentul tău veterinar. Îmi poți trimite o poză cu problema animalului sau o întrebare." }
+  ]);
+  
+  // State pentru input
+  const [input, setInput] = useState("");
+  const [preview, setPreview] = useState(null);
+  const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
-  const navigate = useNavigate();
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
+  // Când primim răspuns de la server (AI), îl adăugăm în listă
   useEffect(() => {
-    scrollToBottom();
+    if (actionData?.reply) {
+      setMessages(prev => [...prev, { role: "ai", text: actionData.reply }]);
+    }
+    if (actionData?.error) {
+        setMessages(prev => [...prev, { role: "ai", text: "⚠️ Eroare: " + actionData.error }]);
+    }
+  }, [actionData]);
+
+  // Scroll automat jos
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const sendMessage = async () => {
-    if (!inputMessage.trim() || isLoading) return;
-
-    const userMessage = {
-      role: "user",
-      content: inputMessage.trim(),
-      id: Date.now(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
-    setIsLoading(true);
+  // Gestionează trimiterea manuală (pentru a updata UI-ul instant)
+  const handleSubmit = (e) => {
+    if (!input.trim() && !preview) {
+        e.preventDefault();
+        return;
+    }
     
-    // Curățăm input-ul imediat
-    const currentInput = inputMessage;
-    setInputMessage("");
-
-    // --- SIMULARE AI ---
-    // Așteptăm 1.5 secunde să pară că gândește
-    setTimeout(() => {
-        let responseText = "That's a great question!";
-        
-        // Răspunsuri simple bazate pe cuvinte cheie
-        const lowerInput = currentInput.toLowerCase();
-        if (lowerInput.includes("chocolate")) {
-            responseText = "⚠️ Chocolate is toxic to dogs! It contains theobromine, which dogs cannot metabolize well. If your dog ate chocolate, please contact your vet immediately.";
-        } else if (lowerInput.includes("meow") || lowerInput.includes("cat")) {
-            responseText = "Cats often meow at night due to boredom, hunger, or seeking attention. Ensuring they have a play session before bed might help!";
-        } else if (lowerInput.includes("feed") || lowerInput.includes("food")) {
-            responseText = "Feeding schedules depend on your pet's age and breed. Generally, puppies need 3-4 meals a day, while adult dogs do well with 2.";
-        } else {
-            const genericResponses = [
-                "I'm your AI Pet Assistant. While I can give general advice, for serious medical issues, always consult a vet.",
-                "That sounds interesting! Tell me more about your pet's behavior.",
-                "Keeping your pet hydrated and active is key to a long, happy life.",
-                "Could you clarify what kind of pet you are asking about?"
-            ];
-            responseText = genericResponses[Math.floor(Math.random() * genericResponses.length)];
-        }
-        
-        setMessages((prev) => [
-            ...prev,
-            { role: "assistant", content: responseText, id: Date.now() + 1 },
-        ]);
-        setIsLoading(false);
-    }, 1500);
+    // Adăugăm mesajul utilizatorului în listă imediat
+    setMessages(prev => [
+        ...prev, 
+        { role: "user", text: input, image: preview }
+    ]);
+    
+    setInput("");
+    setPreview(null);
+    // Formularul se trimite automat către action...
   };
 
-  const handleKeyPress = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        setPreview(URL.createObjectURL(file));
     }
   };
-
-  if (userLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    if (typeof window !== "undefined") {
-      window.location.href = "/account/signin";
-    }
-    return null;
-  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 flex flex-col">
-      {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-4">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate("/dashboard")}
-                className="text-gray-600 hover:text-gray-800 p-2 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <div className="flex items-center gap-2">
-                <div className="bg-blue-100 p-2 rounded-full">
-                  <MessageCircle className="w-6 h-6 text-blue-600" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold text-gray-800">
-                    AI Pet Assistant
-                  </h1>
-                  <p className="text-sm text-gray-600">
-                    Get expert pet care advice (Demo Mode)
-                  </p>
-                </div>
-              </div>
+    <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
+      
+      {/* HEADER */}
+      <div className="bg-white border-b border-gray-200 p-4 flex items-center gap-4 sticky top-0 z-10">
+        <Link to="/dashboard" className="p-2 hover:bg-gray-100 rounded-full text-gray-600">
+            <ArrowLeft size={20} />
+        </Link>
+        <div className="flex items-center gap-3">
+            <div className="bg-green-100 p-2 rounded-full relative">
+                <Bot size={24} className="text-green-600" />
+                <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="bg-green-100 p-2 rounded-full">
-                <PawPrint className="w-5 h-5 text-green-600" />
-              </div>
+            <div>
+                <h1 className="font-bold text-gray-900 leading-none">Vet Expert AI</h1>
+                <p className="text-xs text-gray-500">Online • Răspunde instant</p>
             </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Chat Messages */}
-      <div className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
-        <div className="bg-white rounded-xl shadow-lg border border-gray-100 h-full flex flex-col">
-          {/* Messages Area */}
-          <div className="flex-1 p-6 overflow-y-auto">
-            {messages.length === 0 && (
-              <div className="text-center py-12">
-                <div className="bg-blue-100 p-4 rounded-full w-fit mx-auto mb-4">
-                  <Bot className="w-12 h-12 text-blue-600" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-800 mb-2">
-                  Welcome to PetAssistent AI!
-                </h3>
-                <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                  I'm here to help with all your pet care questions.
-                </p>
-              </div>
-            )}
-
-            <div className="space-y-4">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
-                >
-                  {message.role === "assistant" && (
-                    <div className="bg-blue-100 p-2 rounded-full h-fit">
-                      <Bot className="w-5 h-5 text-blue-600" />
-                    </div>
-                  )}
-                  <div
-                    className={`max-w-[80%] p-4 rounded-2xl ${
-                      message.role === "user"
-                        ? "bg-green-600 text-white"
-                        : "bg-gray-100 text-gray-800"
-                    }`}
-                  >
-                    <p className="whitespace-pre-wrap">{message.content}</p>
-                  </div>
-                  {message.role === "user" && (
-                    <div className="bg-green-100 p-2 rounded-full h-fit">
-                      <User className="w-5 h-5 text-green-600" />
-                    </div>
-                  )}
-                </div>
-              ))}
-
-              {isLoading && (
-                <div className="flex gap-3 justify-start">
-                  <div className="bg-blue-100 p-2 rounded-full h-fit">
-                    <Bot className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div className="max-w-[80%] p-4 rounded-2xl bg-gray-100 text-gray-800">
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Thinking...</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Input Area */}
-          <div className="border-t border-gray-200 p-4">
-            <div className="flex gap-3">
-              <textarea
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Ask me anything about pet care..."
-                className="flex-1 resize-none border border-gray-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                rows="1"
-                style={{ minHeight: "48px", maxHeight: "120px" }}
-                disabled={isLoading}
-              />
-              <button
-                onClick={sendMessage}
-                disabled={!inputMessage.trim() || isLoading}
-                className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white p-3 rounded-lg transition-colors flex items-center justify-center"
-              >
-                {isLoading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Send className="w-5 h-5" />
-                )}
-              </button>
-            </div>
-          </div>
         </div>
       </div>
+
+      {/* ZONA MESAJE */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-32">
+        {messages.map((msg, idx) => (
+            <div key={idx} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                
+                {msg.role === 'ai' && (
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                        <Bot size={16} className="text-green-600" />
+                    </div>
+                )}
+
+                <div className={`max-w-[80%] rounded-2xl p-4 shadow-sm text-sm leading-relaxed ${
+                    msg.role === 'user' 
+                    ? 'bg-green-600 text-white rounded-tr-none' 
+                    : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none'
+                }`}>
+                    {msg.image && (
+                        <img src={msg.image} alt="Upload" className="w-full h-48 object-cover rounded-lg mb-3 border border-white/20" />
+                    )}
+                    <p>{msg.text}</p>
+                </div>
+
+                {msg.role === 'user' && (
+                    <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                        <User size={16} className="text-gray-500" />
+                    </div>
+                )}
+            </div>
+        ))}
+
+        {/* Loading Animation */}
+        {isSending && (
+            <div className="flex gap-3 justify-start">
+                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Bot size={16} className="text-green-600" />
+                </div>
+                <div className="bg-white p-4 rounded-2xl border border-gray-100 rounded-tl-none flex items-center gap-2">
+                    <Loader2 size={16} className="animate-spin text-green-600" />
+                    <span className="text-xs text-gray-400">Analizez datele...</span>
+                </div>
+            </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* INPUT AREA (Jos) */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4">
+         <div className="max-w-3xl mx-auto">
+            
+            {/* Preview Poză înainte de trimitere */}
+            {preview && (
+                <div className="mb-2 relative inline-block">
+                    <img src={preview} alt="Preview" className="h-20 rounded-lg border border-gray-200" />
+                    <button 
+                        onClick={() => { setPreview(null); fileInputRef.current.value = ""; }}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                    >
+                        ✕
+                    </button>
+                </div>
+            )}
+
+            <Form method="post" encType="multipart/form-data" onSubmit={handleSubmit} className="flex items-end gap-2">
+                
+                {/* Buton Upload Poză */}
+                <label className="p-3 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-xl cursor-pointer transition">
+                    <ImageIcon size={24} />
+                    <input 
+                        type="file" 
+                        name="image" 
+                        accept="image/*" 
+                        className="hidden" 
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                    />
+                </label>
+
+                {/* Text Input */}
+                <div className="flex-1 bg-gray-50 rounded-xl border border-gray-200 focus-within:border-green-500 focus-within:ring-1 focus-within:ring-green-500 transition px-4 py-2">
+                    <textarea 
+                        name="prompt"
+                        rows="1"
+                        placeholder="Scrie o întrebare sau trimite o poză..."
+                        className="w-full bg-transparent outline-none text-sm resize-none pt-1 text-gray-700 placeholder-gray-400"
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                // Nu putem da submit programatic ușor la Form în React Router v7 fără hook-uri complexe, 
+                                // așa că ne bazăm pe butonul de send.
+                            }
+                        }}
+                    ></textarea>
+                </div>
+
+                {/* Buton Trimite */}
+                <button 
+                    type="submit" 
+                    disabled={isSending || (!input && !preview)}
+                    className="p-3 bg-green-600 text-white rounded-xl hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-lg shadow-green-100"
+                >
+                    {isSending ? <Loader2 size={24} className="animate-spin" /> : <Send size={24} />}
+                </button>
+            </Form>
+         </div>
+      </div>
+
     </div>
   );
 }
-
-export default MainComponent;
