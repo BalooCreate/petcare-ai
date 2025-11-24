@@ -1,149 +1,95 @@
-// src/app/pets/[id]/edit/page.jsx
-import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
-import { redirect } from "next/navigation";
-import Link from "next/link";
+import { Form, useLoaderData, redirect, Link } from "react-router";
+import sql from "../../api/utils/sql"; // Verifică dacă calea e corectă!
 
-export default async function EditPetPage({ params }) {
-  const session = await auth();
-  if (!session) redirect("/login");
+// 1. Încărcăm datele existente ca să le punem în formular
+export async function loader({ params }) {
+  const result = await sql`SELECT * FROM pets WHERE id = ${params.id}`;
+  if (!result.length) throw new Response("Not Found", { status: 404 });
+  return { pet: result[0] };
+}
 
-  const pet = await prisma.pet.findUnique({
-    where: { id: params.id },
-  });
+// 2. Salvăm modificările (UPDATE)
+export async function action({ request, params }) {
+  const formData = await request.formData();
+  
+  const name = formData.get("name");
+  const species = formData.get("species");
+  const breed = formData.get("breed");
+  const weight = formData.get("weight");
+  const image_url = formData.get("image_url");
+  const details = formData.get("details");
 
-  // Verificăm dacă animalul există și aparține utilizatorului
-  if (!pet || pet.userId !== session.user.id) {
-    redirect("/dashboard");
-  }
+  await sql`
+    UPDATE pets 
+    SET 
+      name = ${name},
+      species = ${species},
+      breed = ${breed},
+      weight = ${weight},
+      image_url = ${image_url},
+      details = ${details}
+    WHERE id = ${params.id}
+  `;
 
-  // Funcția care rulează când salvăm modificările
-  async function updatePet(formData) {
-    "use server";
+  return redirect(`/pets/${params.id}`);
+}
 
-    const name = formData.get("name");
-    const species = formData.get("species");
-    const breed = formData.get("breed");
-    const age = parseInt(formData.get("age"));
-    const weight = parseFloat(formData.get("weight"));
-    const imageUrl = formData.get("imageUrl") || null;
-
-    await prisma.pet.update({
-      where: { id: pet.id },
-      data: {
-        name,
-        species,
-        breed,
-        age,
-        weight,
-        imageUrl,
-      },
-    });
-
-    redirect(`/pets/${pet.id}`);
-  }
+// 3. Formularul de editare
+export default function EditPetPage() {
+  const { pet } = useLoaderData();
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      <div className="max-w-md mx-auto bg-white min-h-screen shadow-xl">
-        {/* Header */}
-        <div className="p-4 flex items-center gap-4 border-b sticky top-0 bg-white z-10">
-          <Link href={`/pets/${pet.id}`} className="text-2xl">
-            ←
-          </Link>
-          <h1 className="font-bold text-lg">Editează Profilul</h1>
-        </div>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="bg-white p-8 rounded-2xl shadow-xl max-w-lg w-full border border-gray-100">
+        <h1 className="text-2xl font-bold mb-6 text-gray-800">Editează Profilul: {pet.name}</h1>
+        
+        <Form method="post" className="space-y-4">
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Nume</label>
+            <input name="name" defaultValue={pet.name} className="w-full p-2 border rounded-lg" required />
+          </div>
 
-        <div className="p-6">
-          <form action={updatePet} className="space-y-6">
-            
-            {/* Nume */}
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Numele Animalului</label>
-              <input 
-                type="text" 
-                name="name" 
-                defaultValue={pet.name}
-                required 
-                className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-              />
+                <label className="block text-sm font-medium text-gray-700">Specie</label>
+                <select name="species" defaultValue={pet.species} className="w-full p-2 border rounded-lg">
+                    <option value="Câine">Câine</option>
+                    <option value="Pisică">Pisică</option>
+                    <option value="Altul">Altul</option>
+                </select>
             </div>
-
-            {/* Specie */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Specie</label>
-              <select 
-                name="species" 
-                defaultValue={pet.species}
-                className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-              >
-                <option value="Câine">Câine</option>
-                <option value="Pisică">Pisică</option>
-                <option value="Altul">Altul</option>
-              </select>
+                <label className="block text-sm font-medium text-gray-700">Rasă</label>
+                <input name="breed" defaultValue={pet.breed} className="w-full p-2 border rounded-lg" />
             </div>
+          </div>
 
-            {/* Rasa */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Rasă (Opțional)</label>
-              <input 
-                type="text" 
-                name="breed" 
-                defaultValue={pet.breed || ""}
-                className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Greutate (kg)</label>
+            <input name="weight" type="number" step="0.1" defaultValue={pet.weight} className="w-full p-2 border rounded-lg" />
+          </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              {/* Vârsta */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Vârstă (ani)</label>
-                <input 
-                  type="number" 
-                  name="age" 
-                  defaultValue={pet.age}
-                  required 
-                  className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                />
-              </div>
-              
-              {/* Greutate */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Greutate (kg)</label>
-                <input 
-                  type="number" 
-                  step="0.1" 
-                  name="weight" 
-                  defaultValue={pet.weight}
-                  required 
-                  className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                />
-              </div>
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Imagine URL</label>
+            <input name="image_url" defaultValue={pet.image_url} className="w-full p-2 border rounded-lg" placeholder="https://..." />
+          </div>
 
-            {/* Imagine URL */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Link Imagine (URL)</label>
-              <input 
-                type="url" 
-                name="imageUrl" 
-                defaultValue={pet.imageUrl || ""}
-                placeholder="https://..."
-                className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-              <p className="text-xs text-gray-500 mt-1">Lasă gol pentru a păstra imaginea actuală (dacă nu o schimbi).</p>
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Note Medicale / Detalii</label>
+            <textarea name="details" defaultValue={pet.details} className="w-full p-2 border rounded-lg h-24" />
+          </div>
 
-            {/* Buton Salvare */}
-            <button 
-              type="submit" 
-              className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-blue-700 transition transform active:scale-95"
-            >
-              Salvează Modificările
+          <div className="flex gap-4 mt-6">
+            <Link to={`/pets/${pet.id}`} className="flex-1 py-3 text-center text-gray-600 font-bold bg-gray-100 rounded-xl hover:bg-gray-200">
+              Anulează
+            </Link>
+            <button type="submit" className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-lg">
+              Salvează
             </button>
+          </div>
 
-          </form>
-        </div>
+        </Form>
       </div>
     </div>
   );
