@@ -60,6 +60,7 @@ export default function DashboardPage() {
 
         {/* HEADER */}
         <div className="flex justify-between items-end border-b border-gray-100 pb-4">
+            {/* Link către Home */}
             <Link to="/" className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition">
                 <div className="bg-green-100 p-2 rounded-lg">
                     <PawPrint className="text-green-600" size={24} />
@@ -72,17 +73,21 @@ export default function DashboardPage() {
 
             <div className="flex items-center gap-3">
                 <span className="text-xs text-gray-400 hidden sm:inline">Welcome</span>
-                <button 
-                    onClick={comingSoon}
+                
+                {/* Chat Button - Merge la pagina de Chat */}
+                <Link 
+                    to="/chat"
                     className="bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-green-700 transition shadow-sm shadow-green-100"
                 >
                     <MessageCircle size={14} /> AI Chat
-                </button>
+                </Link>
             </div>
         </div>
 
         {/* QUICK ACTIONS */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            
+            {/* 1. Add Pet */}
             <Link to="/pets/add" className="bg-white p-4 rounded-xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex flex-col items-center text-center hover:shadow-md transition cursor-pointer group hover:-translate-y-0.5">
                 <div className="bg-green-50 text-green-600 p-2.5 rounded-full mb-2 group-hover:bg-green-100 transition">
                     <Plus size={20} />
@@ -91,6 +96,7 @@ export default function DashboardPage() {
                 <p className="text-[10px] text-gray-400 mt-0.5">Register new</p>
             </Link>
 
+            {/* 2. Schedules */}
             <Link to="/schedules" className="bg-white p-4 rounded-xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex flex-col items-center text-center hover:shadow-md transition cursor-pointer hover:-translate-y-0.5">
                 <div className="bg-blue-50 text-blue-600 p-2.5 rounded-full mb-2">
                     <Calendar size={20} />
@@ -99,6 +105,7 @@ export default function DashboardPage() {
                 <p className="text-[10px] text-gray-400 mt-0.5">Vets & Vaccines</p>
             </Link>
 
+            {/* 3. Health Log */}
             <Link to="/health" className="bg-white p-4 rounded-xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex flex-col items-center text-center hover:shadow-md transition cursor-pointer hover:-translate-y-0.5">
                 <div className="bg-purple-50 text-purple-600 p-2.5 rounded-full mb-2">
                     <Activity size={20} />
@@ -107,6 +114,7 @@ export default function DashboardPage() {
                 <p className="text-[10px] text-gray-400 mt-0.5">Records</p>
             </Link>
 
+            {/* 4. SMART SCAN (GOLD) */}
             <Link to="/scan" className="bg-white p-4 rounded-xl border border-orange-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex flex-col items-center text-center hover:shadow-md transition cursor-pointer hover:-translate-y-0.5 ring-1 ring-orange-50">
                 <div className="bg-orange-50 text-orange-600 p-2.5 rounded-full mb-2">
                     <Camera size={20} />

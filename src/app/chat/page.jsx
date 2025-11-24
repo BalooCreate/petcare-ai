@@ -1,22 +1,22 @@
 import { useState, useEffect, useRef } from "react";
 import { Form, useNavigation, useActionData, Link } from "react-router";
-import { ArrowLeft, Send, Image as ImageIcon, Bot, User, Loader2 } from "lucide-react";
+import { ArrowLeft, Send, Image as ImageIcon, Bot, User, Loader2, Paperclip } from "lucide-react";
 
-// --- BACKEND: Discuția cu OpenAI (Server-Side) ---
+// --- BACKEND: Server-Side Logic ---
 export async function action({ request }) {
   const formData = await request.formData();
   const prompt = formData.get("prompt");
   const imageFile = formData.get("image");
 
-  if (!prompt && !imageFile) return null;
+  if (!prompt && (!imageFile || imageFile.size === 0)) return null;
 
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return { error: "Lipsă API Key! Configurează .env" };
+  if (!apiKey) return { error: "No API Key found." };
 
-  // Construim mesajul pentru AI
-  let content = [{ type: "text", text: prompt || "Analizează această imagine." }];
+  // Pregătim mesajul pentru OpenAI
+  let content = [{ type: "text", text: prompt || "Analyze this image for me." }];
 
-  // Dacă avem poză, o transformăm în Base64
+  // Procesare Poză (dacă există)
   if (imageFile && imageFile.size > 0) {
     const arrayBuffer = await imageFile.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
@@ -37,15 +37,15 @@ export async function action({ request }) {
         "Authorization": `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: "gpt-4o", // Model capabil de viziune (Vision)
+        model: "gpt-4o", // Modelul care vede poze
         messages: [
           {
             role: "system",
-            content: "Ești PetAssistant, un expert veterinar AI. Răspunzi scurt, empatic și profesionist. Dacă primești o poză, analizeaz-o vizual pentru simptome (piele, ochi, răni, produse). Nu da diagnostice definitive, ci sfaturi și recomandă vizita la medic dacă pare grav."
+            content: "You are PetAssistant, an expert AI Veterinarian. Give concise, helpful, and empathetic advice about pet health, nutrition, and behavior. If an image is provided, analyze it visually for symptoms. Always advise seeing a real vet for serious issues."
           },
           { role: "user", content: content }
         ],
-        max_tokens: 300
+        max_tokens: 400
       })
     });
 
@@ -55,50 +55,49 @@ export async function action({ request }) {
     return { reply: data.choices[0].message.content };
 
   } catch (err) {
-    return { error: "Eroare la conectarea cu AI." };
+    return { error: "Failed to connect to AI." };
   }
 }
 
-// --- FRONTEND: Interfața de Chat ---
+// --- FRONTEND: Chat Interface ---
 export default function ChatPage() {
   const actionData = useActionData();
   const navigation = useNavigation();
   const isSending = navigation.state === "submitting";
   
-  // State pentru mesaje
+  // Istoricul mesajelor
   const [messages, setMessages] = useState([
-    { role: "ai", text: "Salut! Sunt asistentul tău veterinar. Îmi poți trimite o poză cu problema animalului sau o întrebare." }
+    { role: "ai", text: "Hello! I'm your AI Vet Assistant. You can ask me anything or send a photo of your pet for analysis. 🐾" }
   ]);
   
-  // State pentru input
   const [input, setInput] = useState("");
   const [preview, setPreview] = useState(null);
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
 
-  // Când primim răspuns de la server (AI), îl adăugăm în listă
+  // Când vine răspunsul de la AI, îl adăugăm în chat
   useEffect(() => {
     if (actionData?.reply) {
       setMessages(prev => [...prev, { role: "ai", text: actionData.reply }]);
     }
     if (actionData?.error) {
-        setMessages(prev => [...prev, { role: "ai", text: "⚠️ Eroare: " + actionData.error }]);
+        setMessages(prev => [...prev, { role: "ai", text: "⚠️ Error: " + actionData.error }]);
     }
   }, [actionData]);
 
-  // Scroll automat jos
+  // Scroll automat la ultimul mesaj
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, isSending]);
 
-  // Gestionează trimiterea manuală (pentru a updata UI-ul instant)
+  // Gestionează trimiterea manuală pentru a updata UI-ul instant
   const handleSubmit = (e) => {
     if (!input.trim() && !preview) {
         e.preventDefault();
         return;
     }
     
-    // Adăugăm mesajul utilizatorului în listă imediat
+    // Adăugăm mesajul utilizatorului instant
     setMessages(prev => [
         ...prev, 
         { role: "user", text: input, image: preview }
@@ -106,7 +105,7 @@ export default function ChatPage() {
     
     setInput("");
     setPreview(null);
-    // Formularul se trimite automat către action...
+    // Formularul continuă să trimită datele la server...
   };
 
   const handleFileChange = (e) => {
@@ -120,23 +119,23 @@ export default function ChatPage() {
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
       
       {/* HEADER */}
-      <div className="bg-white border-b border-gray-200 p-4 flex items-center gap-4 sticky top-0 z-10">
-        <Link to="/dashboard" className="p-2 hover:bg-gray-100 rounded-full text-gray-600">
+      <div className="bg-white border-b border-gray-200 p-4 flex items-center gap-4 sticky top-0 z-10 shadow-sm">
+        <Link to="/dashboard" className="p-2 hover:bg-gray-100 rounded-full text-gray-600 transition">
             <ArrowLeft size={20} />
         </Link>
         <div className="flex items-center gap-3">
             <div className="bg-green-100 p-2 rounded-full relative">
                 <Bot size={24} className="text-green-600" />
-                <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></span>
+                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></span>
             </div>
             <div>
-                <h1 className="font-bold text-gray-900 leading-none">Vet Expert AI</h1>
-                <p className="text-xs text-gray-500">Online • Răspunde instant</p>
+                <h1 className="font-bold text-gray-900 leading-none text-sm">Vet Expert AI</h1>
+                <p className="text-[10px] text-green-600 font-medium mt-0.5">Online • Replies instantly</p>
             </div>
         </div>
       </div>
 
-      {/* ZONA MESAJE */}
+      {/* MESAJE */}
       <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-32">
         {messages.map((msg, idx) => (
             <div key={idx} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -147,7 +146,7 @@ export default function ChatPage() {
                     </div>
                 )}
 
-                <div className={`max-w-[80%] rounded-2xl p-4 shadow-sm text-sm leading-relaxed ${
+                <div className={`max-w-[80%] rounded-2xl p-4 text-sm leading-relaxed shadow-sm ${
                     msg.role === 'user' 
                     ? 'bg-green-600 text-white rounded-tr-none' 
                     : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none'
@@ -166,32 +165,33 @@ export default function ChatPage() {
             </div>
         ))}
 
-        {/* Loading Animation */}
+        {/* Loading Bubbles */}
         {isSending && (
-            <div className="flex gap-3 justify-start">
+            <div className="flex gap-3 justify-start animate-pulse">
                 <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
                     <Bot size={16} className="text-green-600" />
                 </div>
                 <div className="bg-white p-4 rounded-2xl border border-gray-100 rounded-tl-none flex items-center gap-2">
                     <Loader2 size={16} className="animate-spin text-green-600" />
-                    <span className="text-xs text-gray-400">Analizez datele...</span>
+                    <span className="text-xs text-gray-400 font-medium">Analyzing...</span>
                 </div>
             </div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* INPUT AREA (Jos) */}
+      {/* INPUT BAR */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4">
          <div className="max-w-3xl mx-auto">
             
-            {/* Preview Poză înainte de trimitere */}
+            {/* Preview Poză */}
             {preview && (
-                <div className="mb-2 relative inline-block">
-                    <img src={preview} alt="Preview" className="h-20 rounded-lg border border-gray-200" />
+                <div className="mb-2 relative inline-block animate-fadeIn">
+                    <img src={preview} alt="Preview" className="h-20 rounded-lg border border-gray-200 shadow-sm" />
                     <button 
-                        onClick={() => { setPreview(null); fileInputRef.current.value = ""; }}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                        type="button"
+                        onClick={() => { setPreview(null); if(fileInputRef.current) fileInputRef.current.value = ""; }}
+                        className="absolute -top-2 -right-2 bg-gray-800 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-500 transition"
                     >
                         ✕
                     </button>
@@ -200,9 +200,9 @@ export default function ChatPage() {
 
             <Form method="post" encType="multipart/form-data" onSubmit={handleSubmit} className="flex items-end gap-2">
                 
-                {/* Buton Upload Poză */}
+                {/* Upload Button */}
                 <label className="p-3 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-xl cursor-pointer transition">
-                    <ImageIcon size={24} />
+                    <Paperclip size={20} />
                     <input 
                         type="file" 
                         name="image" 
@@ -213,32 +213,30 @@ export default function ChatPage() {
                     />
                 </label>
 
-                {/* Text Input */}
-                <div className="flex-1 bg-gray-50 rounded-xl border border-gray-200 focus-within:border-green-500 focus-within:ring-1 focus-within:ring-green-500 transition px-4 py-2">
+                {/* Text Area */}
+                <div className="flex-1 bg-gray-50 rounded-2xl border border-gray-200 focus-within:border-green-500 focus-within:ring-1 focus-within:ring-green-500 transition px-4 py-2.5">
                     <textarea 
                         name="prompt"
                         rows="1"
-                        placeholder="Scrie o întrebare sau trimite o poză..."
-                        className="w-full bg-transparent outline-none text-sm resize-none pt-1 text-gray-700 placeholder-gray-400"
+                        placeholder="Ask a question or send a photo..."
+                        className="w-full bg-transparent outline-none text-sm resize-none text-gray-700 placeholder-gray-400"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault();
-                                // Nu putem da submit programatic ușor la Form în React Router v7 fără hook-uri complexe, 
-                                // așa că ne bazăm pe butonul de send.
+                                // Optional: Submit on Enter (requires ref to button or form logic)
                             }
                         }}
                     ></textarea>
                 </div>
 
-                {/* Buton Trimite */}
+                {/* Send Button */}
                 <button 
                     type="submit" 
-                    disabled={isSending || (!input && !preview)}
-                    className="p-3 bg-green-600 text-white rounded-xl hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-lg shadow-green-100"
+                    disabled={isSending || (!input.trim() && !preview)}
+                    className="p-3 bg-green-600 text-white rounded-xl hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-md shadow-green-100"
                 >
-                    {isSending ? <Loader2 size={24} className="animate-spin" /> : <Send size={24} />}
+                    <Send size={20} />
                 </button>
             </Form>
          </div>
