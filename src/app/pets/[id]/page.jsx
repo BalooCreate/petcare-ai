@@ -1,8 +1,8 @@
 import { useLoaderData, Link, Form, redirect } from "react-router";
 import { ArrowLeft, PawPrint, FileText, Activity, Trash2, AlertTriangle, Zap, Hash, Pencil } from "lucide-react";
-import sql from "../../api/utils/sql"; // Asigură-te că calea e corectă
+import sql from "../../api/utils/sql"; // Ensure the path is correct
 
-// --- BACKEND: Citire date ---
+// --- BACKEND: Read data ---
 export async function loader({ params }) {
   try {
     const result = await sql`SELECT * FROM pets WHERE id = ${params.id}`;
@@ -13,7 +13,7 @@ export async function loader({ params }) {
   }
 }
 
-// --- BACKEND: Ștergere ---
+// --- BACKEND: Delete ---
 export async function action({ params, request }) {
   const formData = await request.formData();
   const intent = formData.get("intent");
@@ -24,7 +24,7 @@ export async function action({ params, request }) {
   }
 }
 
-// Funcție pentru calcul vârstă
+// Function to calculate age
 function getAge(dateString) {
   if (!dateString) return "N/A";
   const today = new Date();
@@ -40,7 +40,7 @@ export default function PetProfilePage() {
   const { pet } = useLoaderData();
 
   const handleDelete = (e) => {
-    if (!window.confirm("Ești sigur că vrei să ștergi acest profil?")) {
+    if (!window.confirm("Are you sure you want to delete this profile?")) {
       e.preventDefault();
     }
   };
@@ -51,8 +51,11 @@ export default function PetProfilePage() {
         
         {/* Header */}
         <div className="mb-8 flex justify-between items-center">
-            <Link to="/dashboard" className="inline-flex items-center text-gray-500 hover:text-green-600 transition gap-2 text-sm font-medium bg-white px-4 py-2 rounded-lg border border-gray-200 hover:shadow-sm">
-                <ArrowLeft size={18} /> Înapoi la Dashboard
+            <Link 
+              to="/dashboard" 
+              className="inline-flex items-center text-gray-500 hover:text-green-600 transition gap-2 text-sm font-medium bg-white px-4 py-2 rounded-lg border border-gray-200 hover:shadow-sm"
+            >
+                <ArrowLeft size={18} /> Back to Dashboard
             </Link>
             <div className="text-xs font-bold uppercase tracking-wider text-gray-400">
                 ID: #{pet.id.toString().slice(0,6)}...
@@ -60,7 +63,7 @@ export default function PetProfilePage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* COL 1: CARD PRINCIPAL */}
+            {/* COL 1: MAIN CARD */}
             <div className="lg:col-span-1">
                 <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center text-center sticky top-6">
                     <div className="w-40 h-40 rounded-full bg-gray-50 mb-6 overflow-hidden border-4 border-white shadow-lg flex items-center justify-center relative">
@@ -78,52 +81,52 @@ export default function PetProfilePage() {
 
                     <div className="w-full space-y-4 text-left bg-gray-50 p-5 rounded-xl border border-gray-100">
                         <div className="flex justify-between items-center">
-                            <span className="text-gray-400 text-xs uppercase font-bold flex items-center gap-2">Rasă</span>
+                            <span className="text-gray-400 text-xs uppercase font-bold flex items-center gap-2">Breed</span>
                             <span className="font-bold text-gray-700">{pet.breed || "-"}</span>
                         </div>
                         <div className="flex justify-between items-center">
-                            <span className="text-gray-400 text-xs uppercase font-bold flex items-center gap-2">Greutate</span>
+                            <span className="text-gray-400 text-xs uppercase font-bold flex items-center gap-2">Weight</span>
                             <span className="font-bold text-gray-700">{pet.weight} kg</span>
                         </div>
                         <div className="flex justify-between items-center">
-                            <span className="text-gray-400 text-xs uppercase font-bold flex items-center gap-2">Vârstă</span>
+                            <span className="text-gray-400 text-xs uppercase font-bold flex items-center gap-2">Age</span>
                             <span className="font-bold text-gray-700">{getAge(pet.birth_date)}</span>
                         </div>
                     </div>
 
-                    {/* ZONA DE BUTOANE */}
+                    {/* ACTION BUTTONS */}
                     <div className="w-full mt-6 space-y-3">
-                        {/* Buton EDITARE - Acum funcțional */}
+                        {/* EDIT BUTTON */}
                         <Link 
                             to="edit" 
                             className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition shadow-md"
                         >
-                            <Pencil size={18} /> Editează Profilul
+                            <Pencil size={18} /> Edit Profile
                         </Link>
 
-                        {/* Buton ȘTERGERE */}
+                        {/* DELETE BUTTON */}
                         <Form method="post" onSubmit={handleDelete}>
                             <input type="hidden" name="intent" value="delete" />
                             <button type="submit" className="w-full flex items-center justify-center gap-2 text-red-500 hover:text-red-700 text-sm font-bold py-3 hover:bg-red-50 rounded-xl transition">
-                                <Trash2 size={16} /> Șterge Profilul
+                                <Trash2 size={16} /> Delete Profile
                             </button>
                         </Form>
                     </div>
                 </div>
             </div>
 
-            {/* COL 2: DETALII */}
+            {/* COL 2: DETAILS */}
             <div className="lg:col-span-2 space-y-6">
-                 {/* Card Informații */}
+                 {/* Info Card */}
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                     <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-blue-50">
                         <h2 className="text-lg font-bold text-blue-900 flex items-center gap-2">
-                            <Activity size={20} /> Detalii
+                            <Activity size={20} /> Details
                         </h2>
                     </div>
                     <div className="p-6">
                         <p className="text-gray-600">
-                           {pet.details || "Nu există notițe medicale momentan."}
+                           {pet.details || "There are no medical notes at the moment."}
                         </p>
                     </div>
                 </div>

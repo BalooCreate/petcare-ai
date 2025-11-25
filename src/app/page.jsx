@@ -1,5 +1,5 @@
-import { Link } from "react-router";
-import { PawPrint, Calendar, Activity, ShieldCheck, Check, Star, Camera, MessageCircle, Heart } from "lucide-react";
+import { Link } from "react-router"; // Asigură-te că importul e corect pentru versiunea ta
+import { PawPrint, Calendar, Activity, ShieldCheck, Check, Star, Camera, MessageCircle } from "lucide-react";
 
 export default function LandingPage() {
   return (
@@ -51,7 +51,7 @@ export default function LandingPage() {
                 <p className="text-gray-500 mt-2">Premium tools for your furry friend.</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                {/* Icons section same as before - simplified for brevity */}
+                {/* Icons section */}
                 <div className="bg-gray-50 p-6 rounded-2xl"><Calendar className="text-green-600 mb-4" /> <h3 className="font-bold">Smart Scheduling</h3></div>
                 <div className="bg-gray-50 p-6 rounded-2xl"><MessageCircle className="text-blue-600 mb-4" /> <h3 className="font-bold">AI Assistant</h3></div>
                 <div className="bg-gray-50 p-6 rounded-2xl"><Activity className="text-purple-600 mb-4" /> <h3 className="font-bold">Health Tracking</h3></div>
@@ -60,7 +60,7 @@ export default function LandingPage() {
          </div>
       </div>
 
-      {/* PRICING SECTION - UPDATED FOR TRIAL */}
+      {/* PRICING SECTION */}
       <div className="py-24 px-6 bg-white border-t border-gray-100">
          <div className="max-w-6xl mx-auto">
             <div className="text-center mb-16">
