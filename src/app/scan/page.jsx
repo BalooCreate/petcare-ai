@@ -3,7 +3,7 @@ import { Link, Form, useNavigation, useActionData } from "react-router";
 import { 
   ArrowLeft, Upload, Camera, 
   Pill, Bone, PartyPopper, Sparkles, 
-  AlertTriangle, CheckCircle, MapPin, Info, Loader2 
+  AlertTriangle, CheckCircle, MapPin, Info, Loader2, ScanLine 
 } from "lucide-react";
 
 // --- BACKEND: SIMULARE AI (GRATUIT) ---
@@ -74,131 +74,160 @@ export default function ScanPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white p-6 font-sans text-gray-800 flex justify-center">
+    <div className="min-h-screen bg-green-50/50 p-6 font-sans text-gray-800 flex justify-center items-start">
       <div className="w-full max-w-3xl mt-2">
         
-        {/* Header */}
+        {/* Header Compact */}
         <div className="mb-6 flex items-center justify-between">
-            <Link to="/dashboard" className="inline-flex items-center text-gray-500 hover:text-green-600 transition gap-2 text-sm font-medium">
-                <ArrowLeft size={18} /> Back to Dashboard
+            <Link to="/dashboard" className="bg-white p-2 rounded-full border border-gray-200 hover:bg-gray-100 text-gray-500 transition shadow-sm">
+                <ArrowLeft size={18} />
             </Link>
-            <span className="text-[10px] font-bold bg-gradient-to-r from-yellow-100 to-orange-100 text-orange-700 px-3 py-1 rounded-full uppercase tracking-wider shadow-sm border border-orange-100">
-                Gold Feature ✨
-            </span>
+            <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold bg-gradient-to-r from-yellow-50 to-orange-50 text-orange-600 px-3 py-1.5 rounded-full uppercase tracking-wider border border-orange-100 shadow-sm flex items-center gap-1">
+                    <Sparkles size={10} /> AI Scanner
+                </span>
+            </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.08)] border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-3xl shadow-xl border border-green-100 overflow-hidden">
             
             {/* Tabs */}
-            <div className="grid grid-cols-4 border-b border-gray-100 bg-gray-50/50">
+            <div className="grid grid-cols-4 border-b border-gray-100 bg-gray-50/30">
                 {['rx', 'food', 'toy', 'hygiene'].map((m) => (
                     <button 
                         key={m}
                         onClick={() => { setSelectedMode(m); setImagePreview(null); }}
-                        className={`py-4 flex flex-col items-center justify-center gap-1.5 transition hover:bg-white ${selectedMode === m ? 'bg-white border-b-2 border-green-500 shadow-sm text-green-700' : 'text-gray-400'}`}
+                        className={`py-4 flex flex-col items-center justify-center gap-1.5 transition relative overflow-hidden group
+                            ${selectedMode === m ? 'bg-white text-green-700 font-bold' : 'text-gray-400 hover:bg-white/50 hover:text-gray-600'}
+                        `}
                     >
-                        {m === 'rx' && <Pill size={20} />}
-                        {m === 'food' && <Bone size={20} />}
-                        {m === 'toy' && <PartyPopper size={20} />}
-                        {m === 'hygiene' && <Sparkles size={20} />}
-                        <span className="text-[10px] font-bold uppercase">{m}</span>
+                        {/* Indicator activ */}
+                        {selectedMode === m && <div className="absolute top-0 w-full h-1 bg-green-500"></div>}
+                        
+                        {m === 'rx' && <Pill size={22} />}
+                        {m === 'food' && <Bone size={22} />}
+                        {m === 'toy' && <PartyPopper size={22} />}
+                        {m === 'hygiene' && <Sparkles size={22} />}
+                        <span className="text-[10px] uppercase tracking-wide">{m === 'rx' ? 'Meds' : m}</span>
                     </button>
                 ))}
             </div>
 
-            <div className="p-6 md:p-8 text-center">
-                <h1 className="text-xl font-bold text-gray-900 mb-2 capitalize">
-                    {selectedMode} Scanner
-                </h1>
-                <p className="text-gray-400 text-xs mb-8 px-4 max-w-md mx-auto">
-                    (Demo Mode) Upload any photo to see how the AI analysis works.
-                </p>
+            <div className="p-6 md:p-8 text-center min-h-[400px]">
+                
+                {!actionData?.result && (
+                    <>
+                        <h1 className="text-xl font-bold text-gray-900 mb-2 capitalize flex items-center justify-center gap-2">
+                            {selectedMode === 'rx' ? 'Medication Safety' : selectedMode + ' Scanner'}
+                        </h1>
+                        <p className="text-gray-400 text-xs mb-8 px-4 max-w-md mx-auto leading-relaxed">
+                            (Demo Mode) Take a photo of a product label or item to detect safety hazards, allergies, or toxicity instantly.
+                        </p>
 
-                {/* Formularul Principal */}
-                <Form method="post" encType="multipart/form-data" className="w-full">
-                    <input type="hidden" name="mode" value={selectedMode} />
-                    
-                    {/* Zona Upload */}
-                    <div className="mb-8">
-                        <label className="relative block w-full h-64 rounded-xl border-2 border-dashed border-gray-200 hover:border-green-500 bg-gray-50 hover:bg-green-50/10 transition cursor-pointer overflow-hidden group">
-                            {imagePreview ? (
-                                <img src={imagePreview} alt="Scan" className="w-full h-full object-contain bg-black/5" />
-                            ) : (
-                                <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 group-hover:text-green-600 transition">
-                                    <div className="bg-white p-4 rounded-full shadow-sm mb-3 group-hover:scale-110 transition">
-                                        <Camera size={28} />
-                                    </div>
-                                    <span className="font-bold text-sm">Tap to scan Item</span>
-                                </div>
-                            )}
-                            <input 
-                                type="file" 
-                                name="image" 
-                                accept="image/*" 
-                                className="hidden" 
-                                ref={fileInputRef}
-                                onChange={handleImageChange} 
-                            />
-                        </label>
-                    </div>
+                        {/* Formularul Principal */}
+                        <Form method="post" encType="multipart/form-data" className="w-full max-w-md mx-auto">
+                            <input type="hidden" name="mode" value={selectedMode} />
+                            
+                            {/* Zona Upload */}
+                            <div className="mb-6">
+                                <label className={`relative block w-full h-64 rounded-2xl border-2 border-dashed transition cursor-pointer overflow-hidden group
+                                    ${imagePreview ? 'border-green-200 bg-white' : 'border-gray-200 bg-gray-50 hover:border-green-400 hover:bg-green-50/10'}
+                                `}>
+                                    {imagePreview ? (
+                                        <img src={imagePreview} alt="Scan" className="w-full h-full object-contain p-2" />
+                                    ) : (
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 group-hover:text-green-600 transition">
+                                            <div className="bg-white p-5 rounded-full shadow-sm mb-4 group-hover:shadow-md group-hover:scale-105 transition border border-gray-100">
+                                                <ScanLine size={32} />
+                                            </div>
+                                            <span className="font-bold text-sm">Tap to Scan Label</span>
+                                            <span className="text-[10px] mt-1 opacity-60">Supports JPG, PNG</span>
+                                        </div>
+                                    )}
+                                    <input 
+                                        type="file" 
+                                        name="image" 
+                                        accept="image/*" 
+                                        className="hidden" 
+                                        ref={fileInputRef}
+                                        onChange={handleImageChange} 
+                                    />
+                                </label>
+                            </div>
 
-                    {/* Buton Analiză */}
-                    {imagePreview && !actionData?.result && (
-                        <button 
-                            type="submit"
-                            disabled={isAnalyzing}
-                            className="w-full bg-gray-900 text-white font-bold py-3.5 rounded-xl hover:bg-black transition shadow-lg flex items-center justify-center gap-2"
-                        >
-                            {isAnalyzing ? (
-                                <><Loader2 size={20} className="animate-spin" /> Analyzing...</>
-                            ) : (
-                                <><Upload size={18} /> Analyze Photo (Demo)</>
+                            {/* Buton Analiză */}
+                            {imagePreview && (
+                                <button 
+                                    type="submit"
+                                    disabled={isAnalyzing}
+                                    className="w-full bg-green-600 text-white font-bold py-3.5 rounded-full hover:bg-green-700 transition shadow-xl hover:shadow-green-500/30 flex items-center justify-center gap-2 transform hover:-translate-y-0.5"
+                                >
+                                    {isAnalyzing ? (
+                                        <><Loader2 size={20} className="animate-spin" /> Processing...</>
+                                    ) : (
+                                        <><Upload size={18} /> Run AI Analysis</>
+                                    )}
+                                </button>
                             )}
-                        </button>
-                    )}
-                </Form>
+                        </Form>
+                    </>
+                )}
 
                 {/* REZULTAT AI */}
                 {actionData?.result && (
-                    <div className="mt-8 text-left animate-fadeIn">
+                    <div className="text-left animate-fadeIn max-w-lg mx-auto">
                         
-                        <div className={`p-5 rounded-xl border-l-4 shadow-sm mb-6 ${
-                            actionData.result.status === 'danger' ? 'bg-red-50 border-red-500' : 
-                            actionData.result.status === 'warning' ? 'bg-orange-50 border-orange-500' : 
-                            actionData.result.status === 'safe' ? 'bg-green-50 border-green-500' :
-                            'bg-blue-50 border-blue-500'
+                        <div className={`p-5 rounded-2xl border mb-6 shadow-sm ${
+                            actionData.result.status === 'danger' ? 'bg-red-50 border-red-200' : 
+                            actionData.result.status === 'warning' ? 'bg-orange-50 border-orange-200' : 
+                            actionData.result.status === 'safe' ? 'bg-green-50 border-green-200' :
+                            'bg-blue-50 border-blue-200'
                         }`}>
-                            <div className="flex items-start gap-3">
-                                <div className="mt-1">
-                                    {actionData.result.status === 'danger' && <AlertTriangle className="text-red-600" />}
-                                    {actionData.result.status === 'warning' && <AlertTriangle className="text-orange-600" />}
-                                    {actionData.result.status === 'safe' && <CheckCircle className="text-green-600" />}
-                                    {actionData.result.status === 'info' && <Info className="text-blue-600" />}
+                            <div className="flex items-start gap-4">
+                                <div className={`p-2 rounded-full shrink-0 ${
+                                     actionData.result.status === 'danger' ? 'bg-red-100 text-red-600' : 
+                                     actionData.result.status === 'warning' ? 'bg-orange-100 text-orange-600' : 
+                                     actionData.result.status === 'safe' ? 'bg-green-100 text-green-600' :
+                                     'bg-blue-100 text-blue-600'
+                                }`}>
+                                    {actionData.result.status === 'danger' && <AlertTriangle size={24} />}
+                                    {actionData.result.status === 'warning' && <AlertTriangle size={24} />}
+                                    {actionData.result.status === 'safe' && <CheckCircle size={24} />}
+                                    {actionData.result.status === 'info' && <Info size={24} />}
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-lg mb-1 text-gray-900">{actionData.result.title}</h3>
-                                    <p className="text-sm text-gray-700 font-medium mb-2">{actionData.result.description}</p>
-                                    {actionData.result.context && <p className="text-xs text-gray-500 italic border-t border-black/5 pt-2">ℹ️ {actionData.result.context}</p>}
+                                    <h3 className="font-bold text-lg mb-1 text-gray-900 leading-tight">{actionData.result.title}</h3>
+                                    <p className="text-sm text-gray-700 font-medium mb-3 leading-snug">{actionData.result.description}</p>
+                                    {actionData.result.context && (
+                                        <div className="flex items-center gap-2 text-xs text-gray-500 bg-white/60 p-2 rounded-lg border border-black/5">
+                                            <Info size={12} /> {actionData.result.context}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
 
-                        <div className="bg-white border border-gray-200 rounded-xl p-5">
-                            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                                <Sparkles size={14} className="text-yellow-500" /> Recommendation
+                        <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100">
+                            <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                                <Sparkles size={12} className="text-yellow-500" /> AI Recommendation
                             </h4>
-                            <p className="text-sm text-gray-800 font-semibold mb-4 leading-relaxed">
+                            <p className="text-sm text-gray-800 font-semibold mb-6 leading-relaxed">
                                 {actionData.result.recommendation}
                             </p>
+                            
                             {actionData.result.places && (
                                 <div className="space-y-3">
+                                    <p className="text-xs font-bold text-gray-400 uppercase">Nearby Help (24/7)</p>
                                     {actionData.result.places.map((place, index) => (
-                                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                        <div key={index} className="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-green-200 transition">
                                             <div className="flex items-center gap-3">
-                                                <div className="bg-green-100 p-2 rounded text-green-700"><MapPin size={16} /></div>
-                                                <div><h5 className="text-sm font-bold text-gray-900">{place.name}</h5><p className="text-[10px] text-gray-500">{place.type} • {place.dist}</p></div>
+                                                <div className="bg-red-50 p-2 rounded-lg text-red-600"><MapPin size={18} /></div>
+                                                <div>
+                                                    <h5 className="text-sm font-bold text-gray-900">{place.name}</h5>
+                                                    <p className="text-[10px] text-gray-500 font-medium">{place.type} • {place.dist}</p>
+                                                </div>
                                             </div>
-                                            <span className="text-[10px] font-bold text-green-600 bg-white px-2 py-1 rounded border border-gray-200 shadow-sm">OPEN</span>
+                                            <span className="text-[10px] font-bold text-green-700 bg-green-50 px-2.5 py-1 rounded-full border border-green-100">OPEN</span>
                                         </div>
                                     ))}
                                 </div>
@@ -208,7 +237,7 @@ export default function ScanPage() {
                         {/* Buton Reset */}
                         <button 
                             onClick={() => { setImagePreview(null); window.location.reload(); }}
-                            className="mt-6 w-full py-3 text-gray-400 hover:text-gray-600 text-sm font-medium"
+                            className="mt-6 w-full py-3.5 bg-white border border-gray-200 text-gray-500 hover:text-green-600 hover:border-green-200 text-sm font-bold rounded-full transition shadow-sm"
                         >
                             Scan Another Item
                         </button>

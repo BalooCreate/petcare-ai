@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { Form, redirect, useNavigation, useActionData, useNavigate } from "react-router";
-import { ArrowLeft, Camera, Plus, PawPrint, AlertCircle, Activity } from "lucide-react";
+import { ArrowLeft, Camera, Plus, PawPrint, AlertCircle, Activity, Save } from "lucide-react";
 import sql from "../../api/utils/sql";
 
 export async function action({ request }) {
-  // 1. Aflăm cine e logat
   const cookieHeader = request.headers.get("Cookie");
   const userIdMatch = cookieHeader?.match(/user_id=([^;]+)/);
   const userId = userIdMatch ? userIdMatch[1] : null;
@@ -60,132 +59,183 @@ export default function AddPetPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 font-sans text-gray-600">
+    <div className="min-h-screen bg-green-50/50 p-4 font-sans text-gray-600 flex justify-center items-center">
       
-      {/* Header */}
-      <div className="max-w-3xl mx-auto mb-6 flex items-center gap-4">
-        <button onClick={() => navigate("/dashboard")} className="text-gray-400 hover:text-gray-600 transition">
-            <ArrowLeft size={20} />
-        </button>
-        <div className="bg-green-100 p-2 rounded-full text-green-600">
-            <PawPrint size={24} />
-        </div>
-        <div>
-            <h1 className="text-xl font-bold text-gray-900">Add New Pet</h1>
-            <p className="text-xs text-gray-500">Create a comprehensive profile for AI analysis</p>
-        </div>
-      </div>
-
-      <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+      {/* Container Principal */}
+      <div className="w-full max-w-5xl bg-white rounded-2xl shadow-xl border border-green-100 overflow-hidden flex flex-col max-h-[95vh] h-auto">
         
-        {actionData?.error && (
-            <div className="mb-6 bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm flex items-center gap-2">
-              <AlertCircle size={16} /> {actionData.error}
-            </div>
-        )}
-
-        <Form method="post" encType="multipart/form-data">
-          
-          {/* Photo Area */}
-          <div className="flex flex-col items-center mb-8">
-            <div className="relative group">
-                <div className="w-32 h-32 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden border-4 border-white shadow-sm">
-                    {preview ? (
-                        <img src={preview} alt="Preview" className="w-full h-full object-cover" />
-                    ) : (
-                        <Camera size={40} className="text-gray-300" />
-                    )}
-                </div>
-                <label className="mt-4 inline-flex items-center px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 cursor-pointer transition shadow-sm">
-                    <span className="mr-2">📷</span> Choose Photo
-                    <input type="file" name="photo" className="hidden" accept="image/*" onChange={handleImageChange} />
-                </label>
-            </div>
-          </div>
-
-          {/* BASIC INFO */}
-          <h3 className="text-sm font-bold text-gray-900 mb-4 border-b border-gray-100 pb-2">Basic Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Pet Name *</label>
-              <input type="text" name="name" className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50/50" placeholder="Rex" />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Species</label>
-              <select name="species" className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50/50">
-                  <option value="dog">Dog</option>
-                  <option value="cat">Cat</option>
-                  <option value="bird">Bird</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Breed</label>
-              <input type="text" name="breed" className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50/50" placeholder="e.g. Labrador" />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Date of Birth</label>
-              <input type="date" name="birth_date" className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50/50 text-gray-600" />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Weight (kg)</label>
-              <input type="number" step="0.1" name="weight" className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50/50" placeholder="0.0" />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Microchip No. (Optional)</label>
-              <input type="text" name="chip_number" className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50/50" placeholder="123456789" />
-            </div>
-          </div>
-
-          {/* MEDICAL & AI INFO */}
-          <h3 className="text-sm font-bold text-gray-900 mb-4 border-b border-gray-100 pb-2 flex items-center gap-2">
-             <Activity size={16} className="text-orange-500" /> Health & AI Profile
-          </h3>
-          <div className="grid grid-cols-1 gap-6 mb-8">
-             <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Allergies (Crucial for Food Scan)</label>
-                <input type="text" name="allergies" className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-red-500 outline-none bg-red-50/30 placeholder-red-300" placeholder="e.g. Chicken, Beef, Pollen" />
-             </div>
-             
-             <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Activity Level (Crucial for Toys/Diet)</label>
-                <div className="grid grid-cols-3 gap-3">
-                    <label className="cursor-pointer">
-                        <input type="radio" name="activity_level" value="low" className="peer hidden" />
-                        <div className="border border-gray-200 rounded-lg p-3 text-center text-xs hover:bg-gray-50 peer-checked:bg-blue-50 peer-checked:border-blue-500 peer-checked:text-blue-700 transition">
-                            🛋️ Low / Lazy
-                        </div>
-                    </label>
-                    <label className="cursor-pointer">
-                        <input type="radio" name="activity_level" value="medium" className="peer hidden" defaultChecked />
-                        <div className="border border-gray-200 rounded-lg p-3 text-center text-xs hover:bg-gray-50 peer-checked:bg-green-50 peer-checked:border-green-500 peer-checked:text-green-700 transition">
-                            🐕 Normal
-                        </div>
-                    </label>
-                    <label className="cursor-pointer">
-                        <input type="radio" name="activity_level" value="high" className="peer hidden" />
-                        <div className="border border-gray-200 rounded-lg p-3 text-center text-xs hover:bg-gray-50 peer-checked:bg-orange-50 peer-checked:border-orange-500 peer-checked:text-orange-700 transition">
-                            ⚡ Hyper / Active
-                        </div>
-                    </label>
+        {/* 1. Header Compact */}
+        <div className="bg-white border-b border-gray-100 px-6 py-3 flex items-center justify-between shrink-0">
+             <div className="flex items-center gap-3">
+                <button onClick={() => navigate("/dashboard")} className="p-2 hover:bg-gray-100 rounded-full text-gray-500 transition">
+                    <ArrowLeft size={20} />
+                </button>
+                <div>
+                    <h1 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                        Add New Pet <span className="text-xs font-normal text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full hidden sm:inline-block">AI Profile</span>
+                    </h1>
                 </div>
              </div>
-
-             <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Medical Notes</label>
-                <textarea name="details" rows="3" className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50/50 placeholder-gray-400 resize-none" placeholder="History of surgeries, chronic illness..."></textarea>
+             <div className="bg-green-50 p-2 rounded-full hidden sm:block">
+                 <PawPrint size={20} className="text-green-600" />
              </div>
-          </div>
+        </div>
 
-          {/* Actions */}
-          <div className="flex justify-between items-center pt-4 border-t border-gray-50">
-             <button type="button" onClick={() => navigate("/dashboard")} className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium rounded-lg text-sm transition">Cancel</button>
-             <button type="submit" disabled={isSubmitting} className="px-8 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg text-sm shadow-lg shadow-green-200 flex items-center gap-2 transition transform hover:-translate-y-0.5 disabled:opacity-70">
-               {/* AICI AM SCHIMBAT TEXTUL: */}
-               {isSubmitting ? "Saving..." : <><Plus size={18} /> Save Profile</>}
-             </button>
-          </div>
+        {/* 2. Corpul Formularului */}
+        <div className="overflow-y-auto p-6 custom-scrollbar">
+            
+            {actionData?.error && (
+                <div className="mb-4 bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm flex items-center gap-2 border border-red-100">
+                    <AlertCircle size={16} /> {actionData.error}
+                </div>
+            )}
 
-        </Form>
+            <Form method="post" encType="multipart/form-data" id="pet-form">
+                
+                {/* LAYOUT GRID: Stânga (Poză+Info) / Dreapta (Sănătate) */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+                    
+                    {/* COLOANA STÂNGA: Identitate (4 coloane din 12) */}
+                    <div className="lg:col-span-4 flex flex-col gap-5">
+                        
+                        {/* Photo Upload - Compact */}
+                        <div className="flex flex-row lg:flex-col items-center gap-4 lg:gap-2 p-4 bg-gray-50 rounded-xl border border-gray-100 border-dashed">
+                            <div className="relative group cursor-pointer shrink-0">
+                                <div className="w-20 h-20 lg:w-32 lg:h-32 rounded-full bg-white flex items-center justify-center overflow-hidden border-2 border-gray-200 shadow-sm">
+                                    {preview ? (
+                                        <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <Camera size={28} className="text-gray-300" />
+                                    )}
+                                </div>
+                                <label className="absolute bottom-0 right-0 bg-green-600 text-white p-1.5 rounded-full shadow hover:bg-green-700 cursor-pointer">
+                                    <Plus size={14} />
+                                    <input type="file" name="photo" className="hidden" accept="image/*" onChange={handleImageChange} />
+                                </label>
+                            </div>
+                            
+                            {/* AICI AM CORECTAT CLASA CSS: */}
+                            <div className="text-left lg:text-center">
+                                <p className="text-sm font-bold text-gray-700">Profile Photo</p>
+                                <p className="text-xs text-gray-400">Tap + to upload</p>
+                            </div>
+                        </div>
+
+                        {/* Basic Fields */}
+                        <div className="space-y-3">
+                            <div>
+                                <label className="text-xs font-bold text-gray-700 ml-1">Pet Name <span className="text-red-500">*</span></label>
+                                <input type="text" name="name" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white" placeholder="Name" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="text-xs font-bold text-gray-700 ml-1">Species</label>
+                                    <select name="species" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white">
+                                        <option value="dog">Dog</option>
+                                        <option value="cat">Cat</option>
+                                        <option value="bird">Bird</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-gray-700 ml-1">Breed</label>
+                                    <input type="text" name="breed" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white" placeholder="Breed" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* COLOANA DREAPTA: Detalii & Sănătate (8 coloane din 12) */}
+                    <div className="lg:col-span-8 flex flex-col gap-4">
+                        
+                        {/* Row: Age, Weight, Chip */}
+                        <div className="grid grid-cols-3 gap-3">
+                            <div>
+                                <label className="text-xs font-bold text-gray-700 ml-1">Birthday</label>
+                                <input type="date" name="birth_date" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white" />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-700 ml-1">Weight (kg)</label>
+                                <input type="number" step="0.1" name="weight" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white" placeholder="0.0" />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-700 ml-1">Chip No.</label>
+                                <input type="text" name="chip_number" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white" placeholder="Optional" />
+                            </div>
+                        </div>
+
+                        <div className="h-px bg-gray-100 my-1"></div>
+
+                        {/* Activity Level - Compact */}
+                        <div>
+                             <label className="text-xs font-bold text-gray-700 mb-2 ml-1 flex items-center gap-1">
+                                <Activity size={14} className="text-orange-500" /> Activity Level
+                             </label>
+                             <div className="grid grid-cols-3 gap-2">
+                                <label className="cursor-pointer">
+                                    <input type="radio" name="activity_level" value="low" className="peer hidden" />
+                                    <div className="border border-gray-200 rounded-lg p-2 text-center hover:bg-gray-50 peer-checked:bg-blue-50 peer-checked:border-blue-500 peer-checked:text-blue-700 transition">
+                                        <div className="text-lg">🛋️</div>
+                                        <div className="text-[10px] font-bold uppercase">Low</div>
+                                    </div>
+                                </label>
+                                <label className="cursor-pointer">
+                                    <input type="radio" name="activity_level" value="medium" className="peer hidden" defaultChecked />
+                                    <div className="border border-gray-200 rounded-lg p-2 text-center hover:bg-gray-50 peer-checked:bg-green-50 peer-checked:border-green-500 peer-checked:text-green-700 transition">
+                                        <div className="text-lg">🐕</div>
+                                        <div className="text-[10px] font-bold uppercase">Normal</div>
+                                    </div>
+                                </label>
+                                <label className="cursor-pointer">
+                                    <input type="radio" name="activity_level" value="high" className="peer hidden" />
+                                    <div className="border border-gray-200 rounded-lg p-2 text-center hover:bg-gray-50 peer-checked:bg-orange-50 peer-checked:border-orange-500 peer-checked:text-orange-700 transition">
+                                        <div className="text-lg">⚡</div>
+                                        <div className="text-[10px] font-bold uppercase">High</div>
+                                    </div>
+                                </label>
+                             </div>
+                        </div>
+
+                        {/* Allergies & Notes */}
+                        <div className="grid grid-cols-1 gap-3">
+                            <div>
+                                <label className="flex items-center justify-between text-xs font-bold text-gray-700 mb-1 ml-1">
+                                    <span>Allergies</span>
+                                    <span className="text-[10px] text-red-500 bg-red-50 px-1.5 rounded">Important</span>
+                                </label>
+                                <input type="text" name="allergies" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-red-500 outline-none bg-red-50/20 placeholder-gray-400" placeholder="e.g. Chicken, Grain..." />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-700 mb-1 ml-1">Medical Notes</label>
+                                <textarea name="details" rows="2" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white resize-none" placeholder="Past surgeries, issues..."></textarea>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </Form>
+        </div>
+
+        {/* 3. Footer Fix - Butonul Salvează mereu vizibil */}
+        <div className="bg-gray-50 border-t border-gray-100 p-4 shrink-0 flex justify-end gap-3">
+            <button 
+                type="button" 
+                onClick={() => navigate("/dashboard")} 
+                className="px-5 py-2.5 bg-white border border-gray-200 hover:bg-gray-100 text-gray-600 font-bold rounded-full text-sm transition"
+            >
+                Cancel
+            </button>
+            {/* Legăm butonul din afara form-ului de form folosind id-ul "pet-form" */}
+            <button 
+                type="submit" 
+                form="pet-form"
+                disabled={isSubmitting} 
+                className="px-8 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-full text-sm shadow-md flex items-center gap-2 transition transform hover:-translate-y-0.5 disabled:opacity-70"
+            >
+                {isSubmitting ? "Saving..." : <>Save Profile <Save size={16} /></>}
+            </button>
+        </div>
+
       </div>
     </div>
   );

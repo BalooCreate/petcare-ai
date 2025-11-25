@@ -1,15 +1,13 @@
 import { useLoaderData, Form, Link, useNavigate } from "react-router";
 import { 
   ArrowLeft, Plus, Activity, Syringe, 
-  Stethoscope, Pill, FileHeart, Calendar 
+  Stethoscope, Pill, FileHeart, Calendar, Save 
 } from "lucide-react";
 import sql from "../api/utils/sql";
 
-// --- BACKEND ---
+// --- BACKEND (Rămâne la fel) ---
 export async function loader() {
-  // Luăm istoricul medical
   const logs = await sql`SELECT * FROM health_logs ORDER BY date DESC`;
-  // Luăm lista de animale pentru formular
   const pets = await sql`SELECT name FROM pets`;
   return { logs, pets };
 }
@@ -30,19 +28,18 @@ export async function action({ request }) {
   return null;
 }
 
-// --- FRONTEND ---
+// --- FRONTEND (REDESENAT) ---
 export default function HealthPage() {
   const { logs, pets } = useLoaderData();
   const navigate = useNavigate();
 
-  // Iconițe specifice pentru fiecare tip de înregistrare
   const getIcon = (type) => {
     switch (type) {
-        case 'vaccine': return <Syringe size={20} className="text-blue-600" />;
-        case 'medication': return <Pill size={20} className="text-purple-600" />;
-        case 'surgery': return <Activity size={20} className="text-red-600" />;
-        case 'checkup': return <Stethoscope size={20} className="text-green-600" />;
-        default: return <FileHeart size={20} className="text-gray-600" />;
+        case 'vaccine': return <Syringe size={18} className="text-blue-600" />;
+        case 'medication': return <Pill size={18} className="text-purple-600" />;
+        case 'surgery': return <Activity size={18} className="text-red-600" />;
+        case 'checkup': return <Stethoscope size={18} className="text-green-600" />;
+        default: return <FileHeart size={18} className="text-gray-600" />;
     }
   };
 
@@ -57,99 +54,109 @@ export default function HealthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white p-6 font-sans text-gray-800 flex justify-center">
-      <div className="w-full max-w-5xl">
+    <div className="min-h-screen bg-green-50/50 p-4 font-sans text-gray-800 flex justify-center items-start">
+      <div className="w-full max-w-6xl">
         
-        {/* Header */}
-        <div className="mb-8 flex items-center gap-4">
-          <button onClick={() => navigate("/dashboard")} className="bg-gray-50 p-2 rounded-full border border-gray-200 hover:bg-gray-100 transition">
-             <ArrowLeft size={20} className="text-gray-600" />
+        {/* Header Compact */}
+        <div className="mb-6 flex items-center gap-3">
+          <button onClick={() => navigate("/dashboard")} className="bg-white p-2 rounded-full border border-gray-200 hover:bg-gray-100 text-gray-500 transition shadow-sm">
+             <ArrowLeft size={18} />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Health Records</h1>
-            <p className="text-sm text-gray-500">Medical history & logs</p>
+            <h1 className="text-xl font-bold text-gray-900">Health Records</h1>
+            <p className="text-xs text-gray-500">Medical history & logs</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
-          {/* DREAPTA: Lista Istoric */}
-          <div className="lg:col-span-2 order-2 lg:order-1 space-y-4">
+          {/* COLOANA STÂNGA: LISTA (Mai lată) */}
+          <div className="lg:col-span-2 order-2 lg:order-1 space-y-3">
              {logs.length === 0 ? (
-                <div className="text-center py-16 bg-gray-50 rounded-3xl border border-dashed border-gray-200">
-                    <FileHeart size={40} className="text-gray-300 mx-auto mb-3" />
-                    <h3 className="text-lg font-bold text-gray-900">No records found</h3>
-                    <p className="text-gray-400 text-sm mt-1">Add vaccines, checkups, or surgeries.</p>
+                <div className="text-center py-12 bg-white rounded-2xl border border-green-100 shadow-sm flex flex-col items-center">
+                    <div className="bg-green-50 p-3 rounded-full mb-3">
+                        <FileHeart size={24} className="text-green-500" />
+                    </div>
+                    <h3 className="text-sm font-bold text-gray-900">No records found</h3>
+                    <p className="text-xs text-gray-400 mt-1">Add vaccines, checkups, or surgeries.</p>
                 </div>
              ) : (
                 logs.map(log => (
-                    <div key={log.id} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-md transition flex gap-4">
-                        {/* Data (Stânga) */}
-                        <div className="flex flex-col items-center justify-center min-w-[60px] bg-gray-50 rounded-xl p-2 border border-gray-100 h-fit">
-                            <span className="text-xs font-bold text-gray-400 uppercase">
+                    <div key={log.id} className="bg-white p-4 rounded-2xl border border-green-100 shadow-sm hover:shadow-md transition flex gap-4 items-start group">
+                        
+                        {/* Data Box */}
+                        <div className="flex flex-col items-center justify-center min-w-[50px] bg-green-50/50 rounded-xl p-2 border border-green-100 h-fit">
+                            <span className="text-[10px] font-bold text-green-600 uppercase">
                                 {new Date(log.date).toLocaleString('default', { month: 'short' })}
                             </span>
-                            <span className="text-xl font-extrabold text-gray-800">
+                            <span className="text-lg font-extrabold text-gray-800 leading-none my-0.5">
                                 {new Date(log.date).getDate()}
                             </span>
-                            <span className="text-xs text-gray-400">
+                            <span className="text-[10px] text-gray-400">
                                 {new Date(log.date).getFullYear()}
                             </span>
                         </div>
 
-                        {/* Detalii (Dreapta) */}
+                        {/* Content */}
                         <div className="flex-1">
                             <div className="flex justify-between items-start mb-1">
                                 <div className="flex items-center gap-2">
-                                    <span className={`p-1.5 rounded-lg ${getBgColor(log.type)}`}>
+                                    <span className={`p-1.5 rounded-lg border ${getBgColor(log.type)}`}>
                                         {getIcon(log.type)}
                                     </span>
-                                    <h3 className="font-bold text-gray-900 text-base">{log.title}</h3>
+                                    <div>
+                                        <h3 className="font-bold text-gray-900 text-sm">{log.title}</h3>
+                                        <p className="text-[10px] text-gray-400 flex items-center gap-1">
+                                           <Stethoscope size={10} /> {log.vet_name || "Unknown Clinic"}
+                                        </p>
+                                    </div>
                                 </div>
-                                <span className="text-xs font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded uppercase">
+                                <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full uppercase tracking-wide border border-gray-200">
                                     {log.pet_name}
                                 </span>
                             </div>
                             
-                            <div className="pl-9">
-                                <p className="text-sm text-gray-500 flex items-center gap-2 mb-2">
-                                    <Stethoscope size={14} /> {log.vet_name || "No clinic specified"}
+                            {log.notes && (
+                                <p className="text-xs text-gray-500 mt-2 bg-gray-50 p-2.5 rounded-lg border border-gray-100 leading-relaxed">
+                                    {log.notes}
                                 </p>
-                                {log.notes && (
-                                    <p className="text-xs text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-100 italic leading-relaxed">
-                                        "{log.notes}"
-                                    </p>
-                                )}
-                            </div>
+                            )}
                         </div>
                     </div>
                 ))
              )}
           </div>
 
-          {/* STÂNGA: Formular Adăugare (Sticky) */}
+          {/* COLOANA DREAPTA: FORMULAR (Compact, fără scroll) */}
           <div className="lg:col-span-1 order-1 lg:order-2">
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 sticky top-6">
-               <h2 className="font-bold text-gray-900 mb-6 flex items-center gap-2 border-b border-gray-50 pb-4">
-                 <Plus size={20} className="text-green-600" /> Add Record
-               </h2>
+            <div className="bg-white p-5 rounded-2xl shadow-lg border border-green-100 sticky top-4">
                
-               <Form method="post" className="space-y-4">
+               <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-100">
+                    <div className="bg-green-100 p-1.5 rounded-md">
+                        <Plus size={16} className="text-green-600" />
+                    </div>
+                    <h2 className="font-bold text-gray-800 text-sm">Add Record</h2>
+               </div>
+               
+               <Form method="post" className="space-y-3">
+                 
+                 {/* Title */}
                  <div>
-                   <label className="block text-xs font-bold text-gray-700 mb-1.5">Title / Diagnosis</label>
-                   <input type="text" name="title" required placeholder="e.g. Rabies Vaccine" className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50/50" />
+                   <label className="block text-[10px] font-bold text-gray-500 mb-1 ml-1 uppercase">Title / Diagnosis</label>
+                   <input type="text" name="title" required placeholder="e.g. Rabies Vaccine" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white transition" />
                  </div>
 
+                 {/* Row: Pet & Type */}
                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1.5">Pet</label>
-                        <select name="pet_name" className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-gray-50/50 focus:ring-2 focus:ring-green-500 outline-none cursor-pointer">
-                            {pets.length > 0 ? pets.map(p => <option key={p.name} value={p.name}>{p.name}</option>) : <option>Add pet first</option>}
+                        <label className="block text-[10px] font-bold text-gray-500 mb-1 ml-1 uppercase">Pet</label>
+                        <select name="pet_name" className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm bg-gray-50 focus:bg-white focus:ring-1 focus:ring-green-500 outline-none cursor-pointer">
+                            {pets.length > 0 ? pets.map(p => <option key={p.name} value={p.name}>{p.name}</option>) : <option>No pets</option>}
                         </select>
                     </div>
                     <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1.5">Type</label>
-                        <select name="type" className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-gray-50/50 focus:ring-2 focus:ring-green-500 outline-none cursor-pointer">
+                        <label className="block text-[10px] font-bold text-gray-500 mb-1 ml-1 uppercase">Type</label>
+                        <select name="type" className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm bg-gray-50 focus:bg-white focus:ring-1 focus:ring-green-500 outline-none cursor-pointer">
                             <option value="vaccine">Vaccine</option>
                             <option value="checkup">Checkup</option>
                             <option value="medication">Meds</option>
@@ -159,23 +166,26 @@ export default function HealthPage() {
                     </div>
                  </div>
 
-                 <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1.5">Date</label>
-                    <input type="date" name="date" required className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50/50 focus:ring-2 focus:ring-green-500 outline-none text-gray-600" />
+                 {/* Row: Date & Vet */}
+                 <div className="grid grid-cols-2 gap-3">
+                     <div>
+                        <label className="block text-[10px] font-bold text-gray-500 mb-1 ml-1 uppercase">Date</label>
+                        <input type="date" name="date" required className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm bg-gray-50 focus:bg-white focus:ring-1 focus:ring-green-500 outline-none text-gray-600" />
+                     </div>
+                     <div>
+                       <label className="block text-[10px] font-bold text-gray-500 mb-1 ml-1 uppercase">Vet / Clinic</label>
+                       <input type="text" name="vet_name" placeholder="Dr. Smith" className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm focus:ring-1 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white" />
+                     </div>
                  </div>
 
+                 {/* Notes */}
                  <div>
-                   <label className="block text-xs font-bold text-gray-700 mb-1.5">Vet / Clinic Name</label>
-                   <input type="text" name="vet_name" placeholder="e.g. Dr. Smith Vet Clinic" className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50/50" />
+                   <label className="block text-[10px] font-bold text-gray-500 mb-1 ml-1 uppercase">Notes / Results</label>
+                   <textarea name="notes" rows="2" placeholder="Details..." className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white resize-none transition"></textarea>
                  </div>
 
-                 <div>
-                   <label className="block text-xs font-bold text-gray-700 mb-1.5">Notes / Results</label>
-                   <textarea name="notes" rows="3" placeholder="Weight was 12kg. Next dose in 1 year..." className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50/50 resize-none"></textarea>
-                 </div>
-
-                 <button type="submit" className="w-full bg-black text-white font-bold py-3 rounded-xl hover:bg-gray-800 transition shadow-lg flex justify-center items-center gap-2 mt-2">
-                    Save Record
+                 <button type="submit" className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 rounded-full shadow-md hover:shadow-green-500/20 flex justify-center items-center gap-2 mt-2 transition-all text-sm transform hover:-translate-y-0.5">
+                    <Save size={16} /> Save Record
                  </button>
                </Form>
             </div>
