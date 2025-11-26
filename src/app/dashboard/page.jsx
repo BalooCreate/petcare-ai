@@ -1,11 +1,13 @@
 import { useLoaderData, Link, useNavigate } from "react-router";
 import { 
   Plus, Calendar, Activity, Settings, 
-  ShoppingBag, TicketPercent, ArrowRight, ScanLine 
+  ShoppingBag, TicketPercent, ArrowRight, 
+  Camera, MessageCircle, PawPrint, 
+  Clock, FileText // <--- Am adăugat astea aici
 } from "lucide-react";
-import sql from "../../api/utils/sql";
+import sql from "../api/utils/sql";
 
-// --- BACKEND: Citim datele din baza de date ---
+// --- BACKEND ---
 export async function loader({ request }) {
   const cookieHeader = request.headers.get("Cookie");
   const userIdMatch = cookieHeader?.match(/user_id=([^;]+)/);
@@ -19,135 +21,170 @@ export async function loader({ request }) {
   return { pets, user: user[0] };
 }
 
-// --- FRONTEND: Design-ul Paginii ---
+// --- FRONTEND ---
 export default function DashboardPage() {
   const { pets, user } = useLoaderData();
-  const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-green-50/50 p-6 font-sans text-gray-800 flex justify-center items-start">
+    <div className="min-h-screen bg-green-50/30 p-6 font-sans text-gray-800 flex justify-center items-start">
       <div className="w-full max-w-6xl">
         
-        {/* 1. HEADER: Salut și Buton Adăugare */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-            <div>
-                <h1 className="text-3xl font-extrabold text-gray-900">
-                    Hello, {user?.name || "Friend"}! 👋
-                </h1>
-                <p className="text-gray-500 text-sm mt-1">Welcome back to your pet care hub.</p>
-            </div>
+        {/* 1. HEADER */}
+        <div className="flex items-center justify-between mb-10 mt-4">
+            <Link to="/" className="group block cursor-pointer">
+                <div className="flex items-center gap-2">
+                    <div className="bg-green-100 p-2 rounded-lg text-green-600 group-hover:bg-green-200 transition">
+                        <PawPrint size={24} />
+                    </div>
+                    <h1 className="text-2xl font-bold text-gray-900 group-hover:text-green-700 transition">PetAssistant</h1>
+                </div>
+                <p className="text-xs text-gray-400 mt-1 ml-1 font-bold uppercase tracking-wider group-hover:text-green-600 flex items-center gap-1 transition">
+                    ← Go to Home
+                </p>
+            </Link>
+
             <div className="flex gap-3">
-                {/* Buton Rapid Scanare AI */}
-                <Link 
-                    to="/scan" 
-                    className="bg-white text-green-700 border border-green-200 px-5 py-3 rounded-xl font-bold shadow-sm hover:shadow-md flex items-center gap-2 transition"
-                >
-                    <ScanLine size={20} /> AI Scan
+                <Link to="/settings" className="bg-white text-gray-600 px-4 py-2 rounded-lg font-bold text-xs border border-gray-200 shadow-sm hover:bg-gray-50 flex items-center gap-2 transition">
+                    <Settings size={14} /> Settings
                 </Link>
-                {/* Buton Adăugare Animal */}
-                <Link 
-                    to="/pets/add" 
-                    className="bg-gray-900 hover:bg-black text-white px-5 py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 transition transform hover:-translate-y-0.5"
-                >
-                    <Plus size={20} /> Add Pet
+                <Link to="/scan" className="bg-green-600 text-white px-5 py-2 rounded-lg font-bold text-xs shadow-md hover:bg-green-700 flex items-center gap-2 transition">
+                    <MessageCircle size={16} /> AI Chat / Scan
                 </Link>
             </div>
         </div>
 
-        {/* 2. MENIU RAPID (AICI SUNT BUTOANELE NOI!) */}
-        <div className="mb-10">
-            <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Services & Rewards</h2>
+        {/* 2. GRILA PRINCIPALĂ DE ACȚIUNI */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mb-8">
             
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {/* Add Pet */}
+            <Link to="/pets/add" className="bg-white p-8 rounded-2xl border border-green-100 shadow-sm hover:shadow-md transition flex flex-col items-center text-center group">
+                <div className="bg-green-50 p-4 rounded-full text-green-600 mb-4 group-hover:scale-110 transition">
+                    <Plus size={24} />
+                </div>
+                <h3 className="font-bold text-gray-900">Add Pet</h3>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mt-1">Register new</p>
+            </Link>
+
+            {/* Schedules */}
+            <Link to="/schedules" className="bg-white p-8 rounded-2xl border border-green-100 shadow-sm hover:shadow-md transition flex flex-col items-center text-center group">
+                <div className="bg-blue-50 p-4 rounded-full text-blue-500 mb-4 group-hover:scale-110 transition">
+                    <Calendar size={24} />
+                </div>
+                <h3 className="font-bold text-gray-900">Schedules</h3>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mt-1">Vets & Vaccines</p>
+            </Link>
+
+            {/* Health Logs */}
+            <Link to="/health" className="bg-white p-8 rounded-2xl border border-green-100 shadow-sm hover:shadow-md transition flex flex-col items-center text-center group">
+                <div className="bg-purple-50 p-4 rounded-full text-purple-500 mb-4 group-hover:scale-110 transition">
+                    <Activity size={24} />
+                </div>
+                <h3 className="font-bold text-gray-900">Health Log</h3>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mt-1">Records</p>
+            </Link>
+
+            {/* Smart Scan */}
+            <Link to="/scan" className="bg-white p-8 rounded-2xl border border-green-100 shadow-sm hover:shadow-md transition flex flex-col items-center text-center group relative overflow-hidden">
+                <div className="bg-orange-50 p-4 rounded-full text-orange-500 mb-4 group-hover:scale-110 transition">
+                    <Camera size={24} />
+                </div>
+                <h3 className="font-bold text-gray-900">Smart Scan</h3>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mt-1">Food, Toys & Rx</p>
+                <span className="absolute top-3 right-3 bg-yellow-100 text-yellow-700 text-[8px] font-bold px-1.5 py-0.5 rounded border border-yellow-200">GOLD</span>
+            </Link>
+
+            {/* Pet Shop */}
+            <Link to="/shop" className="bg-white p-8 rounded-2xl border border-green-100 shadow-sm hover:shadow-md transition flex flex-col items-center text-center group">
+                <div className="bg-red-50 p-4 rounded-full text-red-500 mb-4 group-hover:scale-110 transition">
+                    <ShoppingBag size={24} />
+                </div>
+                <h3 className="font-bold text-gray-900">Pet Shop</h3>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mt-1">Daily Deals</p>
+            </Link>
+
+            {/* Coupons */}
+            <Link to="/coupons" className="bg-white p-8 rounded-2xl border border-green-100 shadow-sm hover:shadow-md transition flex flex-col items-center text-center group">
+                <div className="bg-indigo-50 p-4 rounded-full text-indigo-500 mb-4 group-hover:scale-110 transition">
+                    <TicketPercent size={24} />
+                </div>
+                <h3 className="font-bold text-gray-900">Coupons</h3>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mt-1">VIP Rewards</p>
+            </Link>
+
+        </div>
+
+        {/* 3. SECTIUNEA DE JOS (Split View) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            {/* Stânga: My Pets */}
+            <div className="lg:col-span-1">
+                <div className="flex items-center justify-between mb-4 px-1">
+                    <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                        <span className="text-red-400">♥</span> My Pets
+                    </h2>
+                    <Link to="/pets/add" className="text-xs text-gray-400 hover:text-green-600 transition">+</Link>
+                </div>
+
+                <div className="space-y-3">
+                    {pets.length === 0 ? (
+                        <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center shadow-sm">
+                            <p className="text-xs text-gray-400">No pets yet.</p>
+                        </div>
+                    ) : (
+                        pets.map(pet => (
+                            <Link key={pet.id} to={`/pets/${pet.id}`} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm hover:border-green-200 transition flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden flex items-center justify-center shrink-0 border border-gray-200">
+                                    {pet.image_url ? (
+                                        <img src={pet.image_url} alt={pet.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <span className="text-lg">🐾</span>
+                                    )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <h4 className="font-bold text-sm text-gray-900 truncate">{pet.name}</h4>
+                                    <p className="text-[10px] text-gray-400 truncate uppercase">{pet.species}</p>
+                                </div>
+                                <ArrowRight size={14} className="text-gray-300" />
+                            </Link>
+                        ))
+                    )}
+                </div>
+            </div>
+
+            {/* Dreapta: Upcoming & Logs */}
+            <div className="lg:col-span-2 space-y-6">
                 
-                {/* BUTON 1: SHOP (Nou) */}
-                <Link to="/shop" className="bg-white p-5 rounded-3xl border border-green-100 shadow-sm hover:shadow-md hover:border-orange-200 transition group flex flex-col items-center text-center gap-3">
-                    <div className="bg-orange-50 p-3 rounded-2xl text-orange-500 group-hover:scale-110 transition">
-                        <ShoppingBag size={24} />
+                {/* Upcoming Care */}
+                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm min-h-[180px]">
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-xs font-bold text-gray-900 flex items-center gap-2">
+                            <Clock size={14} className="text-blue-500" /> Upcoming Care
+                        </h3>
+                        <span className="text-[10px] font-bold text-blue-600 cursor-pointer">Manage</span>
                     </div>
-                    <div>
-                        <h3 className="font-bold text-sm text-gray-900">Pet Shop</h3>
-                        <p className="text-[10px] text-gray-400 font-medium">Daily Deals</p>
+                    
+                    <div className="flex flex-col items-center justify-center py-4 text-center">
+                        <div className="bg-gray-50 p-3 rounded-xl text-gray-300 mb-2">
+                            <Calendar size={24} />
+                        </div>
+                        <p className="text-xs text-gray-400">No upcoming tasks.</p>
                     </div>
-                </Link>
+                </div>
 
-                {/* BUTON 2: COUPONS (Nou) */}
-                <Link to="/coupons" className="bg-white p-5 rounded-3xl border border-green-100 shadow-sm hover:shadow-md hover:border-purple-200 transition group flex flex-col items-center text-center gap-3">
-                    <div className="bg-purple-50 p-3 rounded-2xl text-purple-500 group-hover:scale-110 transition">
-                        <TicketPercent size={24} />
+                {/* Recent Health Logs */}
+                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-xs font-bold text-gray-900 flex items-center gap-2">
+                            <FileText size={14} className="text-purple-500" /> Recent Health Logs
+                        </h3>
                     </div>
-                    <div>
-                        <h3 className="font-bold text-sm text-gray-900">Coupons</h3>
-                        <p className="text-[10px] text-gray-400 font-medium">VIP Rewards</p>
+                    <div className="h-12 border-2 border-dashed border-gray-100 rounded-xl flex items-center justify-center">
+                        <p className="text-[10px] text-gray-300">No health records yet.</p>
                     </div>
-                </Link>
-
-                {/* BUTON 3: HEALTH */}
-                <Link to="/health" className="bg-white p-5 rounded-3xl border border-green-100 shadow-sm hover:shadow-md hover:border-blue-200 transition group flex flex-col items-center text-center gap-3">
-                    <div className="bg-blue-50 p-3 rounded-2xl text-blue-500 group-hover:scale-110 transition">
-                        <Activity size={24} />
-                    </div>
-                    <div>
-                        <h3 className="font-bold text-sm text-gray-900">Health Logs</h3>
-                        <p className="text-[10px] text-gray-400 font-medium">Medical History</p>
-                    </div>
-                </Link>
-
-                {/* BUTON 4: SCHEDULES */}
-                <Link to="/schedules" className="bg-white p-5 rounded-3xl border border-green-100 shadow-sm hover:shadow-md hover:border-green-300 transition group flex flex-col items-center text-center gap-3">
-                    <div className="bg-green-50 p-3 rounded-2xl text-green-600 group-hover:scale-110 transition">
-                        <Calendar size={24} />
-                    </div>
-                    <div>
-                        <h3 className="font-bold text-sm text-gray-900">Schedules</h3>
-                        <p className="text-[10px] text-gray-400 font-medium">Calendar</p>
-                    </div>
-                </Link>
+                </div>
 
             </div>
-        </div>
 
-        {/* 3. LISTA ANIMALE */}
-        <div>
-            <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">My Pets</h2>
-
-            {pets.length === 0 ? (
-                <div className="bg-white border border-dashed border-green-200 rounded-3xl p-8 text-center">
-                    <p className="text-gray-400 text-sm mb-4">No pets added yet.</p>
-                    <Link to="/pets/add" className="text-green-600 font-bold hover:underline">Add your first pet</Link>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {pets.map(pet => (
-                        <Link key={pet.id} to={`/pets/${pet.id}`} className="group bg-white p-5 rounded-3xl shadow-sm border border-green-100 hover:border-green-300 hover:shadow-md transition flex items-center gap-4 relative overflow-hidden">
-                            {/* Avatar */}
-                            <div className="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center overflow-hidden border-2 border-white shadow-sm shrink-0">
-                                {pet.image_url ? (
-                                    <img src={pet.image_url} alt={pet.name} className="w-full h-full object-cover" />
-                                ) : (
-                                    <span className="text-xl">🐾</span>
-                                )}
-                            </div>
-                            {/* Info */}
-                            <div>
-                                <h3 className="font-bold text-gray-900 group-hover:text-green-700 transition">{pet.name}</h3>
-                                <p className="text-xs text-gray-500 capitalize">{pet.species} • {pet.breed || "-"}</p>
-                            </div>
-                            {/* Arrow */}
-                            <div className="absolute right-5 text-gray-300 group-hover:text-green-500 transition">
-                                <ArrowRight size={18} />
-                            </div>
-                        </Link>
-                    ))}
-                </div>
-            )}
-        </div>
-
-        {/* 4. Footer Settings */}
-        <div className="mt-12 flex justify-center border-t border-green-100 pt-6 pb-10">
-             <Link to="/settings" className="text-gray-400 hover:text-gray-600 flex items-center gap-2 text-xs font-bold uppercase tracking-wider transition">
-                <Settings size={14} /> Account Settings
-             </Link>
         </div>
 
       </div>
