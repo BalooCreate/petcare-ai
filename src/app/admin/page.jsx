@@ -1,6 +1,6 @@
 import { useLoaderData, Form, redirect, useNavigation } from "react-router";
 import { Plus, Trash2, ShoppingBag, TicketPercent, Lock, CheckCircle } from "lucide-react";
-import sql from "../api/utils/sql";
+import sql from "../../api/utils/sql";
 
 // --- BACKEND: Securitate & Date ---
 export async function loader({ request }) {
