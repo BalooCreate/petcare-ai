@@ -16,7 +16,7 @@ export async function action({ request }) {
 
   // Fallback: Dacă nu a ales plan, îi dăm pe cel mediu (LABRADOR). 
   // ⚠️ Înlocuiește cu ID-ul tău de la planul de $10
-  const finalPriceId = planId || 'price_1QlYYYYYYYYYYYYY'; 
+  const finalPriceId = planId || 'price_1SXSTJGCoG5d3tHJm7Z4ilvP'; 
 
   if (!email || !password || !name) return { error: "All fields are required!" };
 
