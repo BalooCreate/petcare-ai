@@ -3,9 +3,9 @@ import { Check, ArrowLeft } from "lucide-react";
 
 // ⚠️ AICI PUI ID-URILE TALE REALE DIN STRIPE
 const PLANS = {
-    chihuahua: "prod_TURLZhcdEAEapC", // ID-ul pentru $5
-    labrador: "prod_TURMS8jigGelIr",  // ID-ul pentru $10
-    greatdane: "prod_TURMm5LotWLcdB"  // ID-ul pentru $25
+    chihuahua: "price_1SXSSpGCoG5d3tHJEhl94v1u", // ID-ul pentru $5
+    labrador: "price_1SXSTJGCoG5d3tHJm7Z4ilvP",  // ID-ul pentru $10
+    greatdane: "price_1SXSTjGCoG5d3tHJF1MjCqpm"  // ID-ul pentru $25
 };
 
 export default function Pricing() {
