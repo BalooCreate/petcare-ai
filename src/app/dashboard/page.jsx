@@ -4,7 +4,7 @@ import {
   ShoppingBag, TicketPercent, ArrowRight, 
   Camera, MessageCircle, PawPrint, Clock, FileText 
 } from "lucide-react";
-import sql from "../../api/utils/sql";
+import sql from "../api/utils/sql";
 
 // --- BACKEND ---
 export async function loader({ request }) {
