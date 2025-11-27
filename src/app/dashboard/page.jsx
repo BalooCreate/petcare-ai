@@ -4,8 +4,12 @@ import {
   ShoppingBag, TicketPercent, ArrowRight, 
   Camera, MessageCircle, PawPrint, Clock, FileText 
 } from "lucide-react";
-import sql from "../api/utils/sql"; // Am corectat calea (../../) ca sa fim siguri
-import InstallBanner from "../../components/InstallBanner"; // <--- IMPORTUL NOII COMPONENTE
+
+// ✅ IMPORTUL CORECT (Așa cum ai zis tu)
+import sql from "../api/utils/sql"; 
+
+// ✅ Importăm butonul de instalare (Acesta e de obicei în src/components, deci ../../ e ok aici)
+import InstallBanner from "../../components/InstallBanner";
 
 // --- BACKEND ---
 export async function loader({ request }) {
@@ -21,7 +25,7 @@ export async function loader({ request }) {
   return { pets, user: user[0] };
 }
 
-// --- FRONTEND COMPACT (DASHBOARD REAL) ---
+// --- FRONTEND ---
 export default function DashboardPage() {
   const { pets, user } = useLoaderData();
 
@@ -53,15 +57,14 @@ export default function DashboardPage() {
             </div>
         </div>
 
-        {/* === 🆕 BUTONUL DE INSTALARE APLICAȚIE === */}
-        {/* Apare doar dacă telefonul permite instalarea */}
+        {/* === BUTONUL DE INSTALARE APLICATIE === */}
+        {/* Va apărea doar dacă telefonul permite instalarea */}
         <InstallBanner />
-        {/* ========================================= */}
+        {/* ======================================= */}
 
-        {/* 2. GRILA DE ACȚIUNI (6 BUTOANE COMPACTE) */}
+        {/* 2. GRILA DE ACȚIUNI */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
             
-            {/* Add Pet */}
             <Link to="/pets/add" className="bg-white p-5 rounded-2xl border border-green-100 shadow-sm hover:shadow-md hover:border-green-300 transition flex flex-col items-center text-center gap-2 group">
                 <div className="bg-green-50 p-3 rounded-full text-green-600 group-hover:scale-110 transition">
                     <Plus size={20} />
@@ -72,7 +75,6 @@ export default function DashboardPage() {
                 </div>
             </Link>
 
-            {/* Schedules */}
             <Link to="/schedules" className="bg-white p-5 rounded-2xl border border-green-100 shadow-sm hover:shadow-md hover:border-green-300 transition flex flex-col items-center text-center gap-2 group">
                 <div className="bg-blue-50 p-3 rounded-full text-blue-500 group-hover:scale-110 transition">
                     <Calendar size={20} />
@@ -83,7 +85,6 @@ export default function DashboardPage() {
                 </div>
             </Link>
 
-            {/* Health Logs */}
             <Link to="/health" className="bg-white p-5 rounded-2xl border border-green-100 shadow-sm hover:shadow-md hover:border-green-300 transition flex flex-col items-center text-center gap-2 group">
                 <div className="bg-purple-50 p-3 rounded-full text-purple-500 group-hover:scale-110 transition">
                     <Activity size={20} />
@@ -94,7 +95,6 @@ export default function DashboardPage() {
                 </div>
             </Link>
 
-            {/* Smart Scan */}
             <Link to="/scan" className="bg-white p-5 rounded-2xl border border-green-100 shadow-sm hover:shadow-md hover:border-green-300 transition flex flex-col items-center text-center gap-2 group">
                 <div className="bg-orange-50 p-3 rounded-full text-orange-500 group-hover:scale-110 transition">
                     <Camera size={20} />
@@ -105,7 +105,6 @@ export default function DashboardPage() {
                 </div>
             </Link>
 
-            {/* Pet Shop */}
             <Link to="/shop" className="bg-white p-5 rounded-2xl border border-green-100 shadow-sm hover:shadow-md hover:border-green-300 transition flex flex-col items-center text-center gap-2 group">
                 <div className="bg-red-50 p-3 rounded-full text-red-500 group-hover:scale-110 transition">
                     <ShoppingBag size={20} />
@@ -116,7 +115,6 @@ export default function DashboardPage() {
                 </div>
             </Link>
 
-            {/* Coupons */}
             <Link to="/coupons" className="bg-white p-5 rounded-2xl border border-green-100 shadow-sm hover:shadow-md hover:border-green-300 transition flex flex-col items-center text-center gap-2 group">
                 <div className="bg-indigo-50 p-3 rounded-full text-indigo-500 group-hover:scale-110 transition">
                     <TicketPercent size={20} />
@@ -129,10 +127,10 @@ export default function DashboardPage() {
 
         </div>
 
-        {/* 3. INFO SECUNDARE (Split View Compact) */}
+        {/* 3. INFO SECUNDARE */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
-            {/* Stânga: My Pets */}
+            {/* My Pets */}
             <div className="lg:col-span-1 bg-white p-5 rounded-2xl border border-gray-100 shadow-sm h-fit">
                 <div className="flex items-center justify-between mb-3">
                     <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
@@ -160,7 +158,7 @@ export default function DashboardPage() {
                 </div>
             </div>
 
-            {/* Dreapta: Stats */}
+            {/* Stats */}
             <div className="lg:col-span-2 grid grid-cols-2 gap-4">
                 <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-center text-center">
                     <div className="flex justify-center mb-2 text-blue-500"><Clock size={20} /></div>
