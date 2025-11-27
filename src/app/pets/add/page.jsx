@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Form, redirect, useNavigation, useActionData, useNavigate } from "react-router";
 import { ArrowLeft, Camera, Plus, PawPrint, AlertCircle, Activity, Save } from "lucide-react";
-import sql from "../../api/utils/sql";
+import sql from "../api/utils/sql";
 
 export async function action({ request }) {
   const cookieHeader = request.headers.get("Cookie");
@@ -15,7 +15,8 @@ export async function action({ request }) {
   const name = formData.get("name");
   const breed = formData.get("breed");
   const age = formData.get("birth_date");
-  const weight = formData.get("weight");
+  let weight = formData.get("weight");
+  const weight_unit = formData.get("weight_unit"); 
   const details = formData.get("details");
   const allergies = formData.get("allergies");
   const activity_level = formData.get("activity_level");
@@ -24,6 +25,11 @@ export async function action({ request }) {
   const species = formData.get("species") || "dog"; 
 
   if (!name) return { error: "Pet Name is required!" };
+
+  // Conversie Automată: Dacă e LBS, transformăm în KG pentru baza de date
+  if (weight && weight_unit === 'lbs') {
+      weight = (parseFloat(weight) / 2.20462).toFixed(2);
+  }
 
   let image_url = null;
 
@@ -53,6 +59,28 @@ export default function AddPetPage() {
   const isSubmitting = navigation.state === "submitting";
   const [preview, setPreview] = useState(null);
 
+  // --- LOGICA GREUTATE (KG/LBS) ---
+  const [weight, setWeight] = useState("");
+  const [unit, setUnit] = useState("lbs"); 
+
+  const handleUnitChange = (newUnit) => {
+      if (!weight) {
+          setUnit(newUnit);
+          return;
+      }
+      const val = parseFloat(weight);
+      if (isNaN(val)) {
+          setUnit(newUnit);
+          return;
+      }
+      if (unit === 'lbs' && newUnit === 'kg') {
+          setWeight((val / 2.20462).toFixed(1));
+      } else if (unit === 'kg' && newUnit === 'lbs') {
+          setWeight((val * 2.20462).toFixed(1));
+      }
+      setUnit(newUnit);
+  };
+
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) setPreview(URL.createObjectURL(file));
@@ -61,10 +89,9 @@ export default function AddPetPage() {
   return (
     <div className="min-h-screen bg-green-50/50 p-4 font-sans text-gray-600 flex justify-center items-center">
       
-      {/* Container Principal */}
       <div className="w-full max-w-5xl bg-white rounded-2xl shadow-xl border border-green-100 overflow-hidden flex flex-col max-h-[95vh] h-auto">
         
-        {/* 1. Header Compact */}
+        {/* Header */}
         <div className="bg-white border-b border-gray-100 px-6 py-3 flex items-center justify-between shrink-0">
              <div className="flex items-center gap-3">
                 <button onClick={() => navigate("/dashboard")} className="p-2 hover:bg-gray-100 rounded-full text-gray-500 transition">
@@ -81,7 +108,7 @@ export default function AddPetPage() {
              </div>
         </div>
 
-        {/* 2. Corpul Formularului */}
+        {/* Form Body */}
         <div className="overflow-y-auto p-6 custom-scrollbar">
             
             {actionData?.error && (
@@ -92,13 +119,10 @@ export default function AddPetPage() {
 
             <Form method="post" encType="multipart/form-data" id="pet-form">
                 
-                {/* LAYOUT GRID: Stânga (Poză+Info) / Dreapta (Sănătate) */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
                     
-                    {/* COLOANA STÂNGA: Identitate (4 coloane din 12) */}
+                    {/* Left Column */}
                     <div className="lg:col-span-4 flex flex-col gap-5">
-                        
-                        {/* Photo Upload - Compact */}
                         <div className="flex flex-row lg:flex-col items-center gap-4 lg:gap-2 p-4 bg-gray-50 rounded-xl border border-gray-100 border-dashed">
                             <div className="relative group cursor-pointer shrink-0">
                                 <div className="w-20 h-20 lg:w-32 lg:h-32 rounded-full bg-white flex items-center justify-center overflow-hidden border-2 border-gray-200 shadow-sm">
@@ -113,15 +137,12 @@ export default function AddPetPage() {
                                     <input type="file" name="photo" className="hidden" accept="image/*" onChange={handleImageChange} />
                                 </label>
                             </div>
-                            
-                            {/* AICI AM CORECTAT CLASA CSS: */}
                             <div className="text-left lg:text-center">
                                 <p className="text-sm font-bold text-gray-700">Profile Photo</p>
                                 <p className="text-xs text-gray-400">Tap + to upload</p>
                             </div>
                         </div>
 
-                        {/* Basic Fields */}
                         <div className="space-y-3">
                             <div>
                                 <label className="text-xs font-bold text-gray-700 ml-1">Pet Name <span className="text-red-500">*</span></label>
@@ -145,19 +166,52 @@ export default function AddPetPage() {
                         </div>
                     </div>
 
-                    {/* COLOANA DREAPTA: Detalii & Sănătate (8 coloane din 12) */}
+                    {/* Right Column */}
                     <div className="lg:col-span-8 flex flex-col gap-4">
                         
-                        {/* Row: Age, Weight, Chip */}
                         <div className="grid grid-cols-3 gap-3">
                             <div>
                                 <label className="text-xs font-bold text-gray-700 ml-1">Birthday</label>
                                 <input type="date" name="birth_date" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white" />
                             </div>
+                            
+                            {/* --- WEIGHT INPUT MODIFICAT --- */}
                             <div>
-                                <label className="text-xs font-bold text-gray-700 ml-1">Weight (kg)</label>
-                                <input type="number" step="0.1" name="weight" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white" placeholder="0.0" />
+                                <label className="text-xs font-bold text-gray-700 ml-1 flex justify-between">
+                                    <span>Weight</span>
+                                    <span className="text-[10px] text-gray-400 font-normal">{unit === 'lbs' ? 'USA' : 'Metric'}</span>
+                                </label>
+                                <div className="flex border border-gray-200 rounded-lg bg-white overflow-hidden focus-within:ring-1 focus-within:ring-green-500">
+                                    <input 
+                                        type="number" 
+                                        step="0.1" 
+                                        name="weight" 
+                                        value={weight}
+                                        onChange={(e) => setWeight(e.target.value)}
+                                        className="w-full px-3 py-2 text-sm outline-none bg-transparent" 
+                                        placeholder="0.0" 
+                                    />
+                                    <input type="hidden" name="weight_unit" value={unit} />
+                                    
+                                    <div className="flex border-l border-gray-100 bg-gray-50">
+                                        <button 
+                                            type="button" 
+                                            onClick={() => handleUnitChange('lbs')}
+                                            className={`px-2 text-[10px] font-bold transition ${unit === 'lbs' ? 'bg-green-100 text-green-700' : 'text-gray-400 hover:text-gray-600'}`}
+                                        >
+                                            LBS
+                                        </button>
+                                        <button 
+                                            type="button" 
+                                            onClick={() => handleUnitChange('kg')}
+                                            className={`px-2 text-[10px] font-bold transition ${unit === 'kg' ? 'bg-green-100 text-green-700' : 'text-gray-400 hover:text-gray-600'}`}
+                                        >
+                                            KG
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
+
                             <div>
                                 <label className="text-xs font-bold text-gray-700 ml-1">Chip No.</label>
                                 <input type="text" name="chip_number" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white" placeholder="Optional" />
@@ -166,7 +220,6 @@ export default function AddPetPage() {
 
                         <div className="h-px bg-gray-100 my-1"></div>
 
-                        {/* Activity Level - Compact */}
                         <div>
                              <label className="text-xs font-bold text-gray-700 mb-2 ml-1 flex items-center gap-1">
                                 <Activity size={14} className="text-orange-500" /> Activity Level
@@ -196,7 +249,6 @@ export default function AddPetPage() {
                              </div>
                         </div>
 
-                        {/* Allergies & Notes */}
                         <div className="grid grid-cols-1 gap-3">
                             <div>
                                 <label className="flex items-center justify-between text-xs font-bold text-gray-700 mb-1 ml-1">
@@ -216,7 +268,7 @@ export default function AddPetPage() {
             </Form>
         </div>
 
-        {/* 3. Footer Fix - Butonul Salvează mereu vizibil */}
+        {/* Footer */}
         <div className="bg-gray-50 border-t border-gray-100 p-4 shrink-0 flex justify-end gap-3">
             <button 
                 type="button" 
@@ -225,7 +277,6 @@ export default function AddPetPage() {
             >
                 Cancel
             </button>
-            {/* Legăm butonul din afara form-ului de form folosind id-ul "pet-form" */}
             <button 
                 type="submit" 
                 form="pet-form"
