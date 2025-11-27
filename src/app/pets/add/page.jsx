@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { Form, redirect, useNavigation, useActionData, useNavigate } from "react-router";
 import { ArrowLeft, Camera, Plus, PawPrint, AlertCircle, Activity, Save } from "lucide-react";
-import sql from "../api/utils/sql";
+import { Buffer } from "buffer"; // Protecție pentru încărcarea pozelor
+
+// ✅ IMPORTUL TĂU ORIGINAL (CARE FUNCȚIONEAZĂ)
+import sql from "../../api/utils/sql";
 
 export async function action({ request }) {
   const cookieHeader = request.headers.get("Cookie");
@@ -16,7 +19,7 @@ export async function action({ request }) {
   const breed = formData.get("breed");
   const age = formData.get("birth_date");
   let weight = formData.get("weight");
-  const weight_unit = formData.get("weight_unit"); 
+  const weight_unit = formData.get("weight_unit"); // Citim unitatea (KG sau LBS)
   const details = formData.get("details");
   const allergies = formData.get("allergies");
   const activity_level = formData.get("activity_level");
@@ -26,22 +29,32 @@ export async function action({ request }) {
 
   if (!name) return { error: "Pet Name is required!" };
 
-  // Conversie Automată: Dacă e LBS, transformăm în KG pentru baza de date
+  // --- CONVERSIE AUTOMATĂ: LBS -> KG ---
+  // Dacă utilizatorul a ales LBS, convertim în KG înainte de a salva în baza de date.
   if (weight && weight_unit === 'lbs') {
-      weight = (parseFloat(weight) / 2.20462).toFixed(2);
+      try {
+        weight = (parseFloat(weight) / 2.20462).toFixed(2);
+      } catch (e) {
+        // Dacă e o eroare de calcul, păstrăm valoarea originală sau null
+      }
   }
 
   let image_url = null;
 
   if (photoFile && photoFile.size > 0) {
     if (photoFile.size > 2000000) return { error: "Photo too large (max 2MB)." };
-    const arrayBuffer = await photoFile.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    const base64 = buffer.toString('base64');
-    image_url = `data:${photoFile.type};base64,${base64}`;
+    try {
+        const arrayBuffer = await photoFile.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const base64 = buffer.toString('base64');
+        image_url = `data:${photoFile.type};base64,${base64}`;
+    } catch (e) {
+        console.error("Eroare la procesarea imaginii:", e);
+    }
   }
 
   try {
+    // Salvăm în baza de date (weight va fi mereu în KG aici)
     await sql`
       INSERT INTO pets (owner_id, name, species, breed, weight, birth_date, details, allergies, activity_level, chip_number, image_url)
       VALUES (${userId}, ${name}, ${species}, ${breed}, ${weight}, ${age}, ${details}, ${allergies}, ${activity_level}, ${chip_number}, ${image_url})
@@ -59,24 +72,28 @@ export default function AddPetPage() {
   const isSubmitting = navigation.state === "submitting";
   const [preview, setPreview] = useState(null);
 
-  // --- LOGICA GREUTATE (KG/LBS) ---
+  // --- LOGICA VIZUALĂ: KG vs LBS ---
   const [weight, setWeight] = useState("");
-  const [unit, setUnit] = useState("lbs"); 
+  const [unit, setUnit] = useState("lbs"); // Setat implicit pe LBS pentru SUA
 
   const handleUnitChange = (newUnit) => {
+      // Dacă nu e scris nimic, schimbăm doar eticheta
       if (!weight) {
           setUnit(newUnit);
           return;
       }
+      
       const val = parseFloat(weight);
       if (isNaN(val)) {
           setUnit(newUnit);
           return;
       }
+
+      // Matematică: Conversie în timp real
       if (unit === 'lbs' && newUnit === 'kg') {
-          setWeight((val / 2.20462).toFixed(1));
+          setWeight((val / 2.20462).toFixed(1)); // LBS -> KG
       } else if (unit === 'kg' && newUnit === 'lbs') {
-          setWeight((val * 2.20462).toFixed(1));
+          setWeight((val * 2.20462).toFixed(1)); // KG -> LBS
       }
       setUnit(newUnit);
   };
@@ -94,7 +111,7 @@ export default function AddPetPage() {
         {/* Header */}
         <div className="bg-white border-b border-gray-100 px-6 py-3 flex items-center justify-between shrink-0">
              <div className="flex items-center gap-3">
-                <button onClick={() => navigate("/dashboard")} className="p-2 hover:bg-gray-100 rounded-full text-gray-500 transition">
+                <button type="button" onClick={() => navigate("/dashboard")} className="p-2 hover:bg-gray-100 rounded-full text-gray-500 transition">
                     <ArrowLeft size={20} />
                 </button>
                 <div>
@@ -175,7 +192,7 @@ export default function AddPetPage() {
                                 <input type="date" name="birth_date" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white" />
                             </div>
                             
-                            {/* --- WEIGHT INPUT MODIFICAT --- */}
+                            {/* --- ZONA DE GREUTATE CU TOGGLE KG/LBS --- */}
                             <div>
                                 <label className="text-xs font-bold text-gray-700 ml-1 flex justify-between">
                                     <span>Weight</span>
@@ -191,6 +208,7 @@ export default function AddPetPage() {
                                         className="w-full px-3 py-2 text-sm outline-none bg-transparent" 
                                         placeholder="0.0" 
                                     />
+                                    {/* Input ascuns care trimite unitatea (KG sau LBS) la backend */}
                                     <input type="hidden" name="weight_unit" value={unit} />
                                     
                                     <div className="flex border-l border-gray-100 bg-gray-50">
@@ -211,6 +229,7 @@ export default function AddPetPage() {
                                     </div>
                                 </div>
                             </div>
+                            {/* --- FINAL ZONA GREUTATE --- */}
 
                             <div>
                                 <label className="text-xs font-bold text-gray-700 ml-1">Chip No.</label>
