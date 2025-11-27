@@ -4,7 +4,8 @@ import {
   ShoppingBag, TicketPercent, ArrowRight, 
   Camera, MessageCircle, PawPrint, Clock, FileText 
 } from "lucide-react";
-import sql from "../api/utils/sql";
+import sql from "../../api/utils/sql"; // Am corectat calea (../../) ca sa fim siguri
+import InstallBanner from "../../components/InstallBanner"; // <--- IMPORTUL NOII COMPONENTE
 
 // --- BACKEND ---
 export async function loader({ request }) {
@@ -52,8 +53,12 @@ export default function DashboardPage() {
             </div>
         </div>
 
+        {/* === 🆕 BUTONUL DE INSTALARE APLICAȚIE === */}
+        {/* Apare doar dacă telefonul permite instalarea */}
+        <InstallBanner />
+        {/* ========================================= */}
+
         {/* 2. GRILA DE ACȚIUNI (6 BUTOANE COMPACTE) */}
-        {/* Acum sunt mai mici și mai strânse */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
             
             {/* Add Pet */}
