@@ -53,11 +53,11 @@ export function ErrorBoundary() {
   return <ErrorDisplay error={error} />;
 }
 
-// ✅ AICI AM FĂCUT MODIFICAREA (Legătura cu PWA)
+// ✅ PWA LINKS: Manifestul și iconițele sunt definite aici
 export const links = () => [
-  { rel: "manifest", href: "/manifest.json" }, // Fișierul creat manual
-  { rel: "icon", href: "/icon.png", type: "image/png" }, // Iconița
-  { rel: "apple-touch-icon", href: "/icon.png" }, // Pentru iPhone
+  { rel: "manifest", href: "/manifest.json" }, 
+  { rel: "icon", href: "/icon.png", type: "image/png" }, 
+  { rel: "apple-touch-icon", href: "/icon.png" }, 
 ];
 
 export function Layout({ children }: { children: ReactNode }) {
@@ -85,5 +85,20 @@ export function Layout({ children }: { children: ReactNode }) {
 }
 
 export default function App() {
+  // ✅ PWA LOGIC: Activarea Service Worker-ului
+  useEffect(() => {
+    // Verificăm dacă browserul suportă Service Worker și nu suntem pe server
+    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("/service-worker.js")
+        .then((registration) => {
+          console.log("PWA Service Worker înregistrat:", registration.scope);
+        })
+        .catch((error) => {
+          console.error("PWA Service Worker eșec:", error);
+        });
+    }
+  }, []);
+
   return <Outlet />;
 }
