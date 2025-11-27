@@ -14,7 +14,7 @@ import { type ReactNode, useEffect } from "react";
 import "./global.css";
 import { Toaster } from "sonner";
 
-// Importăm componentele de eroare direct, simplificat
+// Componenta de eroare
 function ErrorDisplay({ error }: { error: unknown }) {
   let message = "An unexpected error occurred.";
   let details = "";
@@ -53,9 +53,11 @@ export function ErrorBoundary() {
   return <ErrorDisplay error={error} />;
 }
 
+// ✅ AICI AM FĂCUT MODIFICAREA (Legătura cu PWA)
 export const links = () => [
-  // Aici poți adăuga fonturi Google dacă vrei, ex:
-  // { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" }
+  { rel: "manifest", href: "/manifest.json" }, // Fișierul creat manual
+  { rel: "icon", href: "/icon.png", type: "image/png" }, // Iconița
+  { rel: "apple-touch-icon", href: "/icon.png" }, // Pentru iPhone
 ];
 
 export function Layout({ children }: { children: ReactNode }) {
@@ -72,7 +74,6 @@ export function Layout({ children }: { children: ReactNode }) {
         <Toaster position="bottom-right" />
         <ScrollRestoration />
         <Scripts />
-        {/* FontAwesome script păstrat din original */}
         <script
           src="https://kit.fontawesome.com/2c15cc0cc7.js"
           crossOrigin="anonymous"
@@ -84,7 +85,5 @@ export function Layout({ children }: { children: ReactNode }) {
 }
 
 export default function App() {
-  // Am eliminat SessionProvider-ul "fantomă". 
-  // React Router v7 gestionează starea prin loadere.
   return <Outlet />;
 }
