@@ -4,7 +4,7 @@ import {
   ShoppingBag, TicketPercent, ArrowRight, 
   Camera, MessageCircle, PawPrint, Clock, FileText 
 } from "lucide-react";
-import sql from "../../api/utils/sql"; // Am corectat calea (../../) ca sa fim siguri
+import sql from "../api/utils/sql"; // Am corectat calea (../../) ca sa fim siguri
 import InstallBanner from "../../components/InstallBanner"; // <--- IMPORTUL NOII COMPONENTE
 
 // --- BACKEND ---
