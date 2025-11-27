@@ -4,6 +4,10 @@ import {
   Camera, MessageCircle 
 } from "lucide-react";
 
+// ✅ Importăm Butonul de Instalare Aplicație
+// Folosim o cale relativă sigură, presupunând că fișierul e în src/routes
+import InstallBanner from "../components/InstallBanner"; 
+
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white font-sans text-gray-800">
@@ -34,10 +38,16 @@ export default function LandingPage() {
         <h1 className="text-5xl md:text-7xl font-extrabold text-gray-900 mb-6 tracking-tight leading-tight">
           Your Pet's <br /> <span className="text-green-600">Smart Assistant</span>
         </h1>
-        <p className="text-gray-500 text-lg max-w-2xl mx-auto mb-10 leading-relaxed">
+        <p className="text-gray-500 text-lg max-w-2xl mx-auto mb-6 leading-relaxed">
           Manage pet care routines, track health records, and get AI-powered advice. <br />
           <span className="font-bold text-gray-800">Try it risk-free for 14 days.</span>
         </p>
+
+        {/* === AICI AM PUS BUTONUL DE INSTALARE (Max width mic ca să nu fie cât tot ecranul) === */}
+        <div className="max-w-md mx-auto mb-8">
+            <InstallBanner />
+        </div>
+        {/* ================================================================================= */}
 
         <div className="flex justify-center gap-4">
           <Link to="/signup" className="bg-green-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-green-700 transition shadow-xl shadow-green-200 transform hover:-translate-y-1">
