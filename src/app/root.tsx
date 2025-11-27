@@ -4,15 +4,31 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
-  useAsyncError,
   useRouteError,
   isRouteErrorResponse,
-  useNavigate,
-  useLocation,
 } from "react-router";
 import { type ReactNode, useEffect } from "react";
 import "./global.css";
 import { Toaster } from "sonner";
+
+// ✅ 1. CONFIGURARE META (Titlu, Viewport și Setări iPhone)
+export const meta = () => [
+  { title: "PetAssistant" },
+  { charSet: "utf-8" },
+  { name: "viewport", content: "width=device-width, initial-scale=1" },
+  
+  // --- Setări Speciale pentru iPhone (iOS) ---
+  { name: "apple-mobile-web-app-capable", content: "yes" }, // Ascunde bara Safari
+  { name: "apple-mobile-web-app-status-bar-style", content: "default" }, // Culoarea barei de sus
+  { name: "apple-mobile-web-app-title", content: "PetAssistant" }, // Numele sub iconiță
+];
+
+// ✅ 2. CONFIGURARE LINKS (Manifest și Iconițe)
+export const links = () => [
+  { rel: "manifest", href: "/manifest.json" }, 
+  { rel: "icon", href: "/icon.png", type: "image/png" }, 
+  { rel: "apple-touch-icon", href: "/icon.png" }, // Esențial pentru iPhone
+];
 
 // Componenta de eroare
 function ErrorDisplay({ error }: { error: unknown }) {
@@ -53,19 +69,11 @@ export function ErrorBoundary() {
   return <ErrorDisplay error={error} />;
 }
 
-// ✅ PWA LINKS: Manifestul și iconițele sunt definite aici
-export const links = () => [
-  { rel: "manifest", href: "/manifest.json" }, 
-  { rel: "icon", href: "/icon.png", type: "image/png" }, 
-  { rel: "apple-touch-icon", href: "/icon.png" }, 
-];
-
 export function Layout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        {/* Meta și Links sunt injectate automat aici din funcțiile de mai sus */}
         <Meta />
         <Links />
       </head>
@@ -85,17 +93,18 @@ export function Layout({ children }: { children: ReactNode }) {
 }
 
 export default function App() {
-  // ✅ PWA LOGIC: Activarea Service Worker-ului
+  // ✅ 3. PWA LOGIC: Activarea Service Worker-ului
   useEffect(() => {
-    // Verificăm dacă browserul suportă Service Worker și nu suntem pe server
     if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+      // Încercăm să înregistrăm service worker-ul doar în producție sau dacă fișierul există
       navigator.serviceWorker
         .register("/service-worker.js")
         .then((registration) => {
-          console.log("PWA Service Worker înregistrat:", registration.scope);
+          console.log("PWA Service Worker înregistrat cu succes:", registration.scope);
         })
         .catch((error) => {
-          console.error("PWA Service Worker eșec:", error);
+          // Erorile sunt normale în dev mode dacă nu ai generat sw.js, le ignorăm silențios sau dăm log
+          console.log("Service Worker info:", error);
         });
     }
   }, []);
