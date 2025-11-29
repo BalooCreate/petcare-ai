@@ -1,42 +1,43 @@
-const CACHE_NAME = 'petassistant-v1';
-const urlsToCache = [
-  '/',
-  '/index.html',
-  '/icon.png'
+const CACHE_NAME = "petassistant-v1";
+const STATIC_ASSETS = [
+  "/",
+  "/index.html",
+  "/icon.png"
 ];
 
-// 1. Instalează Service Worker-ul
-self.addEventListener('install', (event) => {
+// Install
+self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        return cache.addAll(urlsToCache);
-      })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
   );
 });
 
-// 2. Activează și curăță cache-urile vechi
-self.addEventListener('activate', (event) => {
+// Activate
+self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys.map((key) => {
+          if (key !== CACHE_NAME) {
+            return caches.delete(key);
           }
         })
-      );
-    })
+      )
+    )
   );
 });
 
-// 3. Interceptează cererile de rețea (necesar pentru PWA)
-self.addEventListener('fetch', (event) => {
+// Fetch — NETWORK FIRST for all JS/CSS
+self.addEventListener("fetch", (event) => {
+  const url = new URL(event.request.url);
+
+  // Never cache Vite assets, let server deliver correct MIME
+  if (url.pathname.startsWith("/assets/")) {
+    return; // allow browser to fetch normally
+  }
+
+  // For static or HTML pages → Network First with fallback to cache
   event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Returnează din cache sau ia de pe net
-        return response || fetch(event.request);
-      })
+    fetch(event.request).catch(() => caches.match(event.request))
   );
 });
