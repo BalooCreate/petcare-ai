@@ -116,6 +116,7 @@ export default function AdminPage() {
                                 <option value="toy">Toy</option>
                                 <option value="food">Food</option>
                                 <option value="tech">Tech</option>
+                               <option value="Supplements">Supplements</option>
                                 <option value="grooming">Grooming</option>
                             </select>
                             <label className="flex items-center gap-2 text-sm cursor-pointer">
