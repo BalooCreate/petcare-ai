@@ -32,12 +32,15 @@ export const meta = () => [
   { name: "apple-mobile-web-app-title", content: "PetAssistant" },
   { name: "apple-touch-fullscreen", content: "yes" },
 
+  // AWIN / IMPACT SITE VERIFICATION
+  { name: "impact-site-verification", content: "f5c114c4-840b-4faa-b39b-aee5d4f11bc0" },
+
   // Security
   { httpEquiv: "X-UA-Compatible", content: "IE=edge" },
   { httpEquiv: "Permissions-Policy", content: "interest-cohort=()" },
 
   // SEO
-  { name: "description", content: "Your AI-powered pet assistant for care, routines, and health tracking." },
+  { name: "description", content: "Your AI-powered pet assistant for care, routines, reminders and health tracking." },
   { name: "robots", content: "index,follow" },
 
   // SOCIAL – Facebook / WhatsApp
@@ -61,8 +64,6 @@ export const links = () => [
   { rel: "manifest", href: "/manifest.json" },
   { rel: "icon", href: "/icon.png", type: "image/png" },
   { rel: "apple-touch-icon", href: "/icon.png" },
-
-  // Splash screen iOS (trebuie să ai /public/splash.png)
   { rel: "apple-touch-startup-image", href: "/splash.png" },
 ];
 
@@ -123,6 +124,34 @@ export function Layout({ children }: { children: ReactNode }) {
         <ScrollRestoration />
         <Scripts />
 
+        {/* -------------------------------------------
+            IMPACT / AWIN TRACKING SCRIPT
+        -------------------------------------------- */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function(i,m,p,a,c,t){
+                c.ire_o=p;
+                c[p]=c[p]||function(){(c[p].a=c[p].a||[]).push(arguments)};
+                t=a.createElement(m);
+                var z=a.getElementsByTagName(m)[0];
+                t.async=1;
+                t.src=i;
+                z.parentNode.insertBefore(t,z)
+              })(
+                'https://utt.impactcdn.com/P-A5017366-5e83-4096-86ed-53f2433f57141.js',
+                'script',
+                'impactStat',
+                document,
+                window
+              );
+              impactStat('transformLinks');
+              impactStat('trackImpression');
+            `,
+          }}
+        />
+
+        {/* FontAwesome */}
         <script
           src="https://kit.fontawesome.com/2c15cc0cc7.js"
           crossOrigin="anonymous"
