@@ -28,7 +28,7 @@ export default function ShopPage() {
   const [timeLeft, setTimeLeft] = useState("");
 
   // Categorii disponibile
-  const categories = ["All", "Food", "Toys", "Tech", "Grooming"];
+  const categories = ["All", "Food", "Toys", "Tech", "Grooming", "Supplements"];
 
   // Logica de Filtrare
   const filteredProducts = allProducts.filter(product => {
