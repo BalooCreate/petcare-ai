@@ -1,10 +1,10 @@
 "use client";
 import { useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { useLocation } from "react-router";
 import { runEzoic } from "@/lib/ezoic";
 
 export default function EzoicRouteHandler() {
-    const pathname = usePathname();
+    const location = useLocation();
     useEffect(() => {
         runEzoic(() => {
             window.ezstandalone?.destroyPlaceholders();
@@ -12,6 +12,6 @@ export default function EzoicRouteHandler() {
                 window.ezstandalone?.showAds();
             });
         });
-    }, [pathname]);
+    }, [location.pathname]);
     return null;
 }

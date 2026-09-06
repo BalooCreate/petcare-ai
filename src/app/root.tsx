@@ -10,6 +10,7 @@ import {
 import { type ReactNode, useEffect } from "react";
 import "./global.css";
 import { Toaster } from "sonner";
+import EzoicRouteHandler from "@/components/EzoicRouteHandler";
 
 /* -------------------------------------------
    META TAGS COMPLETE PWA (iOS + Android)
