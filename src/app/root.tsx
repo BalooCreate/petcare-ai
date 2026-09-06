@@ -116,16 +116,20 @@ export function Layout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>
-        {/* Ezoic Scripts - MUST be first in head */}
+        {/* Ezoic Site Verification */}
+        <meta name="ezoic-site-verification" content="UapyUHTsGJOkqfOGhrThPYEbKXdiGA" />
+
+        {/* Ezoic Privacy Scripts (MUST BE FIRST) */}
         <script data-cfasync="false" src="https://cmp.gatekeeperconsent.com/min.js"></script>
         <script data-cfasync="false" src="https://the.gatekeeperconsent.com/cmp.min.js"></script>
+
+        {/* Ezoic Header Script */}
         <script async src="//www.ezojs.com/ezoic/sa.min.js"></script>
         <script>
-          window.ezstandalone = window.ezstandalone || {};
-          ezstandalone.cmd = ezstandalone.cmd || [];
+            window.ezstandalone = window.ezstandalone || {};
+            ezstandalone.cmd = ezstandalone.cmd || [];
         </script>
         <script src="//ezoicanalytics.com/analytics.js"></script>
-        {/* End Ezoic Scripts */}
         <Meta />
         <Links />
       </head>
