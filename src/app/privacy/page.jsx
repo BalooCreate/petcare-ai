@@ -51,12 +51,12 @@ export default function Privacy() {
             </div>
         </div>
 
+        <div>
+          <h2 className="text-2xl font-bold mt-8 mb-4">Advertising and Privacy Disclosures</h2>
+          <span id="ezoic-privacy-policy-embed"></span>
+        </div>
+
       </div>
     </div>
-
-    <div>
-      <h2 className="text-2xl font-bold mt-8 mb-4">Advertising and Privacy Disclosures</h2>
-      <span id="ezoic-privacy-policy-embed"></span>
-    </div>
-    );
+  );
 }
