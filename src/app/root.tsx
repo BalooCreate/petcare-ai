@@ -115,10 +115,21 @@ export function Layout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>
+        {/* Ezoic Scripts - MUST be first in head */}
+        <script data-cfasync="false" src="https://cmp.gatekeeperconsent.com/min.js"></script>
+        <script data-cfasync="false" src="https://the.gatekeeperconsent.com/cmp.min.js"></script>
+        <script async src="//www.ezojs.com/ezoic/sa.min.js"></script>
+        <script>
+          window.ezstandalone = window.ezstandalone || {};
+          ezstandalone.cmd = ezstandalone.cmd || [];
+        </script>
+        <script src="//ezoicanalytics.com/analytics.js"></script>
+        {/* End Ezoic Scripts */}
         <Meta />
         <Links />
       </head>
       <body className="font-sans antialiased">
+        <EzoicRouteHandler />
         {children}
         <Toaster position="bottom-right" />
         <ScrollRestoration />
