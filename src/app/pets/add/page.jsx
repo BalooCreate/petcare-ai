@@ -1,10 +1,32 @@
 import { useState } from "react";
-import { Form, redirect, useNavigation, useActionData, useNavigate } from "react-router";
-import { ArrowLeft, Camera, Plus, PawPrint, AlertCircle, Activity, Save } from "lucide-react";
-import { Buffer } from "buffer"; // Protecție pentru încărcarea pozelor
-
-// ✅ IMPORTUL TĂU ORIGINAL (CARE FUNCȚIONEAZĂ)
+import { Form, redirect, useNavigation, useActionData, useNavigate, useSearchParams, Link } from "react-router";
+import { ArrowLeft, Camera, Plus, PawPrint, AlertCircle, Activity, Save, Crown, Gift, Check } from "lucide-react";
+import { Buffer } from "buffer";
 import sql from "../../api/utils/sql";
+
+export async function loader({ request }) {
+  const cookieHeader = request.headers.get("Cookie");
+  const userIdMatch = cookieHeader?.match(/user_id=([^;]+)/);
+  const userId = userIdMatch ? userIdMatch[1] : null;
+
+  if (!userId) return { petsCount: 0, plan: 'free', welcome: false };
+
+  const url = new URL(request.url);
+  const welcome = url.searchParams.get("welcome") === "true";
+
+  try {
+    const pets = await sql`SELECT COUNT(*) as count FROM pets WHERE owner_id = ${userId} OR user_id = ${userId}`;
+    const userResult = await sql`SELECT plan FROM users WHERE id = ${userId}`;
+    
+    return {
+      petsCount: parseInt(pets[0]?.count || 0),
+      plan: userResult[0]?.plan || 'free',
+      welcome
+    };
+  } catch (e) {
+    return { petsCount: 0, plan: 'free', welcome };
+  }
+}
 
 export async function action({ request }) {
   const cookieHeader = request.headers.get("Cookie");
@@ -19,7 +41,7 @@ export async function action({ request }) {
   const breed = formData.get("breed");
   const age = formData.get("birth_date");
   let weight = formData.get("weight");
-  const weight_unit = formData.get("weight_unit"); // Citim unitatea (KG sau LBS)
+  const weight_unit = formData.get("weight_unit");
   const details = formData.get("details");
   const allergies = formData.get("allergies");
   const activity_level = formData.get("activity_level");
@@ -27,39 +49,58 @@ export async function action({ request }) {
   const photoFile = formData.get("photo");
   const species = formData.get("species") || "dog"; 
 
-  if (!name) return { error: "Pet Name is required!" };
+  if (!name) return { error: "Numele animalului este obligatoriu!" };
 
-  // --- CONVERSIE AUTOMATĂ: LBS -> KG ---
-  // Dacă utilizatorul a ales LBS, convertim în KG înainte de a salva în baza de date.
+  // === FREEMIUM CHECK: câte animale are deja? ===
+  try {
+    const petsCountResult = await sql`SELECT COUNT(*) as count FROM pets WHERE owner_id = ${userId} OR user_id = ${userId}`;
+    const petsCount = parseInt(petsCountResult[0]?.count || 0);
+    
+    const userResult = await sql`SELECT plan FROM users WHERE id = ${userId}`;
+    const plan = userResult[0]?.plan || 'free';
+    
+    let limit = 1;
+    if (plan === 'starter') limit = 3;
+    else if (plan === 'pro') limit = 9999;
+
+    if (petsCount >= limit) {
+      return { 
+        error: `LIMIT_REACHED`,
+        message: `Ai atins limita de ${limit} ${limit === 1 ? 'animal' : 'animale'} pentru planul ${plan === 'free' ? 'Free' : plan}. Fă upgrade la ${limit === 1 ? 'Starter $29' : 'Pro $49'} pentru mai mult!`,
+        limit,
+        plan
+      };
+    }
+  } catch (e) {
+    console.error("Freemium check error", e);
+  }
+
   if (weight && weight_unit === 'lbs') {
       try {
         weight = (parseFloat(weight) / 2.20462).toFixed(2);
-      } catch (e) {
-        // Dacă e o eroare de calcul, păstrăm valoarea originală sau null
-      }
+      } catch (e) {}
   }
 
   let image_url = null;
 
   if (photoFile && photoFile.size > 0) {
-    if (photoFile.size > 2000000) return { error: "Photo too large (max 2MB)." };
+    if (photoFile.size > 2000000) return { error: "Poza prea mare (max 2MB)." };
     try {
         const arrayBuffer = await photoFile.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
         const base64 = buffer.toString('base64');
         image_url = `data:${photoFile.type};base64,${base64}`;
     } catch (e) {
-        console.error("Eroare la procesarea imaginii:", e);
+        console.error("Eroare imagine:", e);
     }
   }
 
   try {
-    // Salvăm în baza de date (weight va fi mereu în KG aici)
     await sql`
       INSERT INTO pets (owner_id, name, species, breed, weight, birth_date, details, allergies, activity_level, chip_number, image_url)
       VALUES (${userId}, ${name}, ${species}, ${breed}, ${weight}, ${age}, ${details}, ${allergies}, ${activity_level}, ${chip_number}, ${image_url})
     `;
-    return redirect("/dashboard"); 
+    return redirect("/dashboard?new_pet=true"); 
   } catch (err) {
     return { error: err.message };
   }
@@ -69,32 +110,21 @@ export default function AddPetPage() {
   const navigation = useNavigation();
   const actionData = useActionData();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const isSubmitting = navigation.state === "submitting";
   const [preview, setPreview] = useState(null);
 
-  // --- LOGICA VIZUALĂ: KG vs LBS ---
   const [weight, setWeight] = useState("");
-  const [unit, setUnit] = useState("lbs"); // Setat implicit pe LBS pentru SUA
+  const [unit, setUnit] = useState("kg");
+
+  const welcome = searchParams.get("welcome") === "true";
 
   const handleUnitChange = (newUnit) => {
-      // Dacă nu e scris nimic, schimbăm doar eticheta
-      if (!weight) {
-          setUnit(newUnit);
-          return;
-      }
-      
+      if (!weight) { setUnit(newUnit); return; }
       const val = parseFloat(weight);
-      if (isNaN(val)) {
-          setUnit(newUnit);
-          return;
-      }
-
-      // Matematică: Conversie în timp real
-      if (unit === 'lbs' && newUnit === 'kg') {
-          setWeight((val / 2.20462).toFixed(1)); // LBS -> KG
-      } else if (unit === 'kg' && newUnit === 'lbs') {
-          setWeight((val * 2.20462).toFixed(1)); // KG -> LBS
-      }
+      if (isNaN(val)) { setUnit(newUnit); return; }
+      if (unit === 'lbs' && newUnit === 'kg') setWeight((val / 2.20462).toFixed(1));
+      else if (unit === 'kg' && newUnit === 'lbs') setWeight((val * 2.20462).toFixed(1));
       setUnit(newUnit);
   };
 
@@ -103,21 +133,53 @@ export default function AddPetPage() {
     if (file) setPreview(URL.createObjectURL(file));
   };
 
+  // Dacă a atins limita
+  if (actionData?.error === 'LIMIT_REACHED') {
+    return (
+      <div className="min-h-screen bg-gray-50 p-4 flex justify-center items-center font-sans">
+        <div className="w-full max-w-md bg-white rounded-[2rem] shadow-xl border p-8 text-center">
+          <div className="bg-orange-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Crown size={32} className="text-orange-600" />
+          </div>
+          <h2 className="text-xl font-bold mb-2">Limită atinsă! 🐾</h2>
+          <p className="text-sm text-gray-600 mb-6">{actionData.message}</p>
+          
+          <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-5 mb-4 text-left">
+            <h3 className="font-bold text-green-800 mb-2 flex items-center gap-2">
+              <Gift size={16} /> Starter Lifetime - $29
+            </h3>
+            <ul className="text-xs text-gray-700 space-y-1.5 mb-4">
+              <li className="flex gap-2"><Check size={14} className="text-green-600" /> 3 animale în loc de 1</li>
+              <li className="flex gap-2"><Check size={14} className="text-green-600" /> 100 AI chats/lună</li>
+              <li className="flex gap-2"><Check size={14} className="text-green-600" /> Fără reclame, pe viață</li>
+            </ul>
+            <Link to="/pricing" className="block w-full bg-green-600 text-white text-center font-bold py-3 rounded-xl hover:bg-green-700">
+              Vezi planurile - de la $29 🚀
+            </Link>
+          </div>
+          
+          <Link to="/dashboard" className="text-sm text-gray-400 hover:text-gray-600">← Înapoi la dashboard</Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-green-50/50 p-4 font-sans text-gray-600 flex justify-center items-center">
+    <div className="min-h-screen bg-green-50/50 p-4 font-sans text-gray-600 flex justify-center items-start">
       
-      <div className="w-full max-w-5xl bg-white rounded-2xl shadow-xl border border-green-100 overflow-hidden flex flex-col max-h-[95vh] h-auto">
+      <div className="w-full max-w-5xl bg-white rounded-[1.8rem] shadow-xl border border-green-100 overflow-hidden flex flex-col max-h-[95vh] h-auto mt-4">
         
         {/* Header */}
-        <div className="bg-white border-b border-gray-100 px-6 py-3 flex items-center justify-between shrink-0">
+        <div className="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between shrink-0">
              <div className="flex items-center gap-3">
                 <button type="button" onClick={() => navigate("/dashboard")} className="p-2 hover:bg-gray-100 rounded-full text-gray-500 transition">
                     <ArrowLeft size={20} />
                 </button>
                 <div>
                     <h1 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                        Add New Pet <span className="text-xs font-normal text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full hidden sm:inline-block">AI Profile</span>
+                        {welcome ? "Bun venit! Adaugă primul animal 🎉" : "Adaugă animal nou"}
                     </h1>
+                    {welcome && <p className="text-xs text-green-600 font-medium">Pasul 1 din 1 • Gratis, 20 secunde</p>}
                 </div>
              </div>
              <div className="bg-green-50 p-2 rounded-full hidden sm:block">
@@ -125,11 +187,18 @@ export default function AddPetPage() {
              </div>
         </div>
 
+        {welcome && (
+          <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 flex items-center gap-3 text-sm">
+            <Gift size={18} className="shrink-0" />
+            <span><strong>Felicitări!</strong> Contul tău gratuit e gata. Adaugă primul animal și primești 5 întrebări AI gratuite luna asta.</span>
+          </div>
+        )}
+
         {/* Form Body */}
-        <div className="overflow-y-auto p-6 custom-scrollbar">
+        <div className="overflow-y-auto p-6">
             
-            {actionData?.error && (
-                <div className="mb-4 bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm flex items-center gap-2 border border-red-100">
+            {actionData?.error && actionData.error !== 'LIMIT_REACHED' && (
+                <div className="mb-4 bg-red-50 text-red-600 px-4 py-3 rounded-xl text-sm flex items-center gap-2 border border-red-100">
                     <AlertCircle size={16} /> {actionData.error}
                 </div>
             )}
@@ -140,7 +209,7 @@ export default function AddPetPage() {
                     
                     {/* Left Column */}
                     <div className="lg:col-span-4 flex flex-col gap-5">
-                        <div className="flex flex-row lg:flex-col items-center gap-4 lg:gap-2 p-4 bg-gray-50 rounded-xl border border-gray-100 border-dashed">
+                        <div className="flex flex-row lg:flex-col items-center gap-4 lg:gap-2 p-4 bg-gray-50 rounded-2xl border border-gray-100 border-dashed">
                             <div className="relative group cursor-pointer shrink-0">
                                 <div className="w-20 h-20 lg:w-32 lg:h-32 rounded-full bg-white flex items-center justify-center overflow-hidden border-2 border-gray-200 shadow-sm">
                                     {preview ? (
@@ -149,163 +218,97 @@ export default function AddPetPage() {
                                         <Camera size={28} className="text-gray-300" />
                                     )}
                                 </div>
-                                <label className="absolute bottom-0 right-0 bg-green-600 text-white p-1.5 rounded-full shadow hover:bg-green-700 cursor-pointer">
+                                <label className="absolute bottom-0 right-0 bg-green-600 text-white p-2 rounded-full shadow hover:bg-green-700 cursor-pointer">
                                     <Plus size={14} />
                                     <input type="file" name="photo" className="hidden" accept="image/*" onChange={handleImageChange} />
                                 </label>
                             </div>
                             <div className="text-left lg:text-center">
-                                <p className="text-sm font-bold text-gray-700">Profile Photo</p>
-                                <p className="text-xs text-gray-400">Tap + to upload</p>
+                                <p className="text-sm font-bold text-gray-700">Poză profil</p>
+                                <p className="text-xs text-gray-400">Apasă + pentru a încărca</p>
                             </div>
                         </div>
 
-                        <div className="space-y-3">
-                            <div>
-                                <label className="text-xs font-bold text-gray-700 ml-1">Pet Name <span className="text-red-500">*</span></label>
-                                <input type="text" name="name" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white" placeholder="Name" />
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="text-xs font-bold text-gray-700 ml-1">Species</label>
-                                    <select name="species" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white">
-                                        <option value="dog">Dog</option>
-                                        <option value="cat">Cat</option>
-                                        <option value="bird">Bird</option>
-                                        <option value="other">Other</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-gray-700 ml-1">Breed</label>
-                                    <input type="text" name="breed" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white" placeholder="Breed" />
-                                </div>
-                            </div>
+                        <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
+                          <p className="text-xs font-bold text-blue-800 mb-1">💡 De ce să adaugi animalul?</p>
+                          <p className="text-[11px] text-blue-600 leading-relaxed">AI-ul va da sfaturi personalizate în funcție de rasă, vârstă și greutate. Cu cât profilul e mai complet, cu atât sfaturile sunt mai bune.</p>
                         </div>
                     </div>
 
                     {/* Right Column */}
                     <div className="lg:col-span-8 flex flex-col gap-4">
                         
-                        <div className="grid grid-cols-3 gap-3">
-                            <div>
-                                <label className="text-xs font-bold text-gray-700 ml-1">Birthday</label>
-                                <input type="date" name="birth_date" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white" />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="md:col-span-2">
+                                <label className="text-xs font-bold text-gray-700 ml-1">Nume animal <span className="text-red-500">*</span></label>
+                                <input type="text" name="name" className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white mt-1" placeholder="Ex: Max, Luna, Rex" required />
                             </div>
                             
-                            {/* --- ZONA DE GREUTATE CU TOGGLE KG/LBS --- */}
+                            <div>
+                                <label className="text-xs font-bold text-gray-700 ml-1">Specie</label>
+                                <select name="species" className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white mt-1">
+                                    <option value="dog">🐶 Câine</option>
+                                    <option value="cat">🐱 Pisică</option>
+                                    <option value="bird">🐦 Pasăre</option>
+                                    <option value="other">🐾 Altul</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-700 ml-1">Rasă</label>
+                                <input type="text" name="breed" className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white mt-1" placeholder="Ex: Labrador, Bichon" />
+                            </div>
+
+                            <div>
+                                <label className="text-xs font-bold text-gray-700 ml-1">Data nașterii</label>
+                                <input type="date" name="birth_date" className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white mt-1" />
+                            </div>
+                            
                             <div>
                                 <label className="text-xs font-bold text-gray-700 ml-1 flex justify-between">
-                                    <span>Weight</span>
-                                    <span className="text-[10px] text-gray-400 font-normal">{unit === 'lbs' ? 'USA' : 'Metric'}</span>
+                                    <span>Greutate</span>
+                                    <span className="text-[10px] text-gray-400 font-normal">{unit.toUpperCase()}</span>
                                 </label>
-                                <div className="flex border border-gray-200 rounded-lg bg-white overflow-hidden focus-within:ring-1 focus-within:ring-green-500">
+                                <div className="flex border border-gray-200 rounded-xl bg-gray-50 overflow-hidden focus-within:ring-2 focus-within:ring-green-500 focus-within:bg-white mt-1">
                                     <input 
                                         type="number" 
                                         step="0.1" 
                                         name="weight" 
                                         value={weight}
                                         onChange={(e) => setWeight(e.target.value)}
-                                        className="w-full px-3 py-2 text-sm outline-none bg-transparent" 
+                                        className="w-full px-4 py-3 text-sm outline-none bg-transparent" 
                                         placeholder="0.0" 
                                     />
-                                    {/* Input ascuns care trimite unitatea (KG sau LBS) la backend */}
                                     <input type="hidden" name="weight_unit" value={unit} />
-                                    
-                                    <div className="flex border-l border-gray-100 bg-gray-50">
-                                        <button 
-                                            type="button" 
-                                            onClick={() => handleUnitChange('lbs')}
-                                            className={`px-2 text-[10px] font-bold transition ${unit === 'lbs' ? 'bg-green-100 text-green-700' : 'text-gray-400 hover:text-gray-600'}`}
-                                        >
-                                            LBS
-                                        </button>
-                                        <button 
-                                            type="button" 
-                                            onClick={() => handleUnitChange('kg')}
-                                            className={`px-2 text-[10px] font-bold transition ${unit === 'kg' ? 'bg-green-100 text-green-700' : 'text-gray-400 hover:text-gray-600'}`}
-                                        >
-                                            KG
-                                        </button>
+                                    <div className="flex border-l border-gray-100 bg-gray-100">
+                                        <button type="button" onClick={() => handleUnitChange('kg')} className={`px-3 text-[11px] font-bold transition ${unit === 'kg' ? 'bg-green-100 text-green-700' : 'text-gray-400'}`}>KG</button>
+                                        <button type="button" onClick={() => handleUnitChange('lbs')} className={`px-3 text-[11px] font-bold transition ${unit === 'lbs' ? 'bg-green-100 text-green-700' : 'text-gray-400'}`}>LBS</button>
                                     </div>
                                 </div>
                             </div>
-                            {/* --- FINAL ZONA GREUTATE --- */}
 
-                            <div>
-                                <label className="text-xs font-bold text-gray-700 ml-1">Chip No.</label>
-                                <input type="text" name="chip_number" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white" placeholder="Optional" />
+                            <div className="md:col-span-2">
+                                <label className="text-xs font-bold text-gray-700 ml-1">Alergii / Condiții speciale</label>
+                                <input type="text" name="allergies" className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white mt-1" placeholder="Ex: alergie la pui, displazie" />
+                            </div>
+
+                            <div className="md:col-span-2">
+                                <label className="text-xs font-bold text-gray-700 ml-1">Detalii extra (opțional)</label>
+                                <textarea name="details" rows="3" className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white mt-1 resize-none" placeholder="Orice vrei să știe AI-ul despre animalul tău..."></textarea>
                             </div>
                         </div>
 
-                        <div className="h-px bg-gray-100 my-1"></div>
-
-                        <div>
-                             <label className="text-xs font-bold text-gray-700 mb-2 ml-1 flex items-center gap-1">
-                                <Activity size={14} className="text-orange-500" /> Activity Level
-                             </label>
-                             <div className="grid grid-cols-3 gap-2">
-                                <label className="cursor-pointer">
-                                    <input type="radio" name="activity_level" value="low" className="peer hidden" />
-                                    <div className="border border-gray-200 rounded-lg p-2 text-center hover:bg-gray-50 peer-checked:bg-blue-50 peer-checked:border-blue-500 peer-checked:text-blue-700 transition">
-                                        <div className="text-lg">🛋️</div>
-                                        <div className="text-[10px] font-bold uppercase">Low</div>
-                                    </div>
-                                </label>
-                                <label className="cursor-pointer">
-                                    <input type="radio" name="activity_level" value="medium" className="peer hidden" defaultChecked />
-                                    <div className="border border-gray-200 rounded-lg p-2 text-center hover:bg-gray-50 peer-checked:bg-green-50 peer-checked:border-green-500 peer-checked:text-green-700 transition">
-                                        <div className="text-lg">🐕</div>
-                                        <div className="text-[10px] font-bold uppercase">Normal</div>
-                                    </div>
-                                </label>
-                                <label className="cursor-pointer">
-                                    <input type="radio" name="activity_level" value="high" className="peer hidden" />
-                                    <div className="border border-gray-200 rounded-lg p-2 text-center hover:bg-gray-50 peer-checked:bg-orange-50 peer-checked:border-orange-500 peer-checked:text-orange-700 transition">
-                                        <div className="text-lg">⚡</div>
-                                        <div className="text-[10px] font-bold uppercase">High</div>
-                                    </div>
-                                </label>
-                             </div>
+                        <div className="flex gap-3 pt-2">
+                          <button type="button" onClick={() => navigate("/dashboard")} className="flex-1 py-3 rounded-xl border border-gray-200 font-bold text-sm hover:bg-gray-50">Anulează</button>
+                          <button type="submit" disabled={isSubmitting} className="flex-[2] bg-green-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-green-700 flex items-center justify-center gap-2 shadow-lg shadow-green-200 disabled:opacity-50">
+                            {isSubmitting ? "Se salvează..." : <><Save size={16} /> Salvează animalul</>}
+                          </button>
                         </div>
 
-                        <div className="grid grid-cols-1 gap-3">
-                            <div>
-                                <label className="flex items-center justify-between text-xs font-bold text-gray-700 mb-1 ml-1">
-                                    <span>Allergies</span>
-                                    <span className="text-[10px] text-red-500 bg-red-50 px-1.5 rounded">Important</span>
-                                </label>
-                                <input type="text" name="allergies" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-red-500 outline-none bg-red-50/20 placeholder-gray-400" placeholder="e.g. Chicken, Grain..." />
-                            </div>
-                            <div>
-                                <label className="text-xs font-bold text-gray-700 mb-1 ml-1">Medical Notes</label>
-                                <textarea name="details" rows="2" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white resize-none" placeholder="Past surgeries, issues..."></textarea>
-                            </div>
-                        </div>
-
+                        <p className="text-[11px] text-center text-gray-400">Poți adăuga mai multe animale după - 1 gratis, 3 cu Starter $29, nelimitat cu Pro $49</p>
                     </div>
                 </div>
             </Form>
         </div>
-
-        {/* Footer */}
-        <div className="bg-gray-50 border-t border-gray-100 p-4 shrink-0 flex justify-end gap-3">
-            <button 
-                type="button" 
-                onClick={() => navigate("/dashboard")} 
-                className="px-5 py-2.5 bg-white border border-gray-200 hover:bg-gray-100 text-gray-600 font-bold rounded-full text-sm transition"
-            >
-                Cancel
-            </button>
-            <button 
-                type="submit" 
-                form="pet-form"
-                disabled={isSubmitting} 
-                className="px-8 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-full text-sm shadow-md flex items-center gap-2 transition transform hover:-translate-y-0.5 disabled:opacity-70"
-            >
-                {isSubmitting ? "Saving..." : <>Save Profile <Save size={16} /></>}
-            </button>
-        </div>
-
       </div>
     </div>
   );
