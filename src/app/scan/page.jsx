@@ -139,28 +139,50 @@ async function analyzeImageWithAI({ imageFile, mode, plan }) {
   const base64 = Buffer.from(arrayBuffer).toString('base64');
   const dataUrl = `data:${imageFile.type || 'image/jpeg'};base64,${base64}`;
 
-  const response = await fetch(provider.url, {
-    method: "POST",
-    headers: aiHeaders(provider),
-    body: JSON.stringify({
-      model: resolveModel(aiModel, provider),
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: SCAN_PROMPTS[mode] || SCAN_PROMPTS.rx },
-            { type: "image_url", image_url: { url: dataUrl } },
-          ],
-        },
-      ],
-      max_tokens: aiMaxTokens,
-      response_format: { type: "json_object" },
-    }),
-  });
+  const payload = {
+    model: resolveModel(aiModel, provider),
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
+      {
+        role: "user",
+        content: [
+          { type: "text", text: SCAN_PROMPTS[mode] || SCAN_PROMPTS.rx },
+          { type: "image_url", image_url: { url: dataUrl } },
+        ],
+      },
+    ],
+    max_tokens: aiMaxTokens,
+  };
 
-  const data = await response.json();
-  if (data.error) throw new Error(describeAiError(data, provider));
+  const send = async (body) => {
+    const res = await fetch(provider.url, {
+      method: "POST",
+      headers: aiHeaders(provider),
+      body: JSON.stringify(body),
+    });
+    return res.json();
+  };
+
+  // Ask for strict JSON. Not every model supports json_object — free models in
+  // particular often reject it — so if that specific parameter is the problem we
+  // simply retry without it (the system prompt still demands JSON, and
+  // normalizeResult validates the shape afterwards).
+  let data = await send({ ...payload, response_format: { type: "json_object" } });
+
+  if (data.error) {
+    const msg = data.error.message || "";
+    const paramProblem = /response_format|json_object|json_schema|structured|unsupported|not supported/i.test(msg);
+    if (paramProblem) {
+      console.warn("[scan] model rejects response_format, retrying without it");
+      data = await send(payload);
+    }
+  }
+
+  if (data.error) {
+    // Log the real cause; the scan route falls back to demo results for the visitor.
+    console.error("[scan] AI error:", describeAiError(data, provider));
+    throw new Error('AI unavailable');
+  }
 
   const raw = data.choices?.[0]?.message?.content;
   if (!raw) throw new Error('Empty AI response');
@@ -169,11 +191,16 @@ async function analyzeImageWithAI({ imageFile, mode, plan }) {
   try {
     parsed = JSON.parse(raw);
   } catch {
-    // The model wrapped the JSON in extra text — extract the object
-    const match = raw.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error('Unparseable AI response');
-    parsed = JSON.parse(match[0]);
+    // Weaker models often wrap JSON in markdown fences or add a sentence around it.
+    const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    const braced = raw.match(/\{[\s\S]*\}/);
+    try {
+      parsed = JSON.parse(fenced ? fenced[1] : braced ? braced[0] : raw);
+    } catch {
+      parsed = null;
+    }
   }
+  if (!parsed) throw new Error('Unparseable AI response');
 
   const normalized = normalizeResult(parsed, mode);
   if (!normalized) throw new Error('Unusable AI response');

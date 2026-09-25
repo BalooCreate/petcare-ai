@@ -3,7 +3,7 @@ import { Form, useNavigation, useActionData, Link, useLoaderData } from "react-r
 import { ArrowLeft, Send, Bot, User, Loader2, Paperclip, Crown, Zap, AlertCircle } from "lucide-react";
 import { ACTIONS, getLimit as getLimitFromPlans } from "../../lib/plans.js";
 import { checkLimit, consumeUsage, getUsage, getUserPlan, getUserIdFromRequest } from "../../lib/usage.js";
-import { getAiProvider, resolveModel, aiHeaders, describeAiError } from "../../lib/ai.js";
+import { getAiProvider, resolveModel, aiHeaders, describeAiError, isConfigError, isUnreachableBaseUrl, AI_UNAVAILABLE_MESSAGE } from "../../lib/ai.js";
 
 // --- LOADER: read plan and usage ---
 export async function loader({ request }) {
@@ -93,7 +93,11 @@ export async function action({ request }) {
     });
 
     const data = await response.json();
-    if (data.error) return { error: describeAiError(data, provider) };
+    if (data.error) {
+      // Real reason (key / credit / provider) goes to the server log only.
+      console.error("[chat] AI error:", describeAiError(data, provider));
+      return { error: isConfigError(data) ? AI_UNAVAILABLE_MESSAGE : data.error.message };
+    }
     
     const reply = data.choices[0].message.content;
 
@@ -103,8 +107,16 @@ export async function action({ request }) {
     return { reply, model, usage: { used: aiUsed + 1, limit: aiLimit, plan: userPlan } };
 
   } catch (err) {
-    console.error(err);
-    return { error: "Failed to connect to AI. Please try again." };
+    // "fetch failed" is almost always a URL the server cannot reach.
+    if (isUnreachableBaseUrl(provider)) {
+      console.error(
+        `[chat] AI_BASE_URL points at ${provider.url}, which is a local/private address. ` +
+        "A deployed server can only reach public URLs — remove AI_BASE_URL or host the gateway with a public address."
+      );
+    } else {
+      console.error("[chat] AI request failed:", err);
+    }
+    return { error: AI_UNAVAILABLE_MESSAGE };
   }
 }
 
