@@ -9,6 +9,7 @@ import { Buffer } from "buffer";
 import { ACTIONS, getLimit } from "../../lib/plans.js";
 import { checkLimit, consumeUsage, getUsage, getUserPlan, getUserIdFromRequest } from "../../lib/usage.js";
 import SoftPaywall from "../../components/SoftPaywall";
+import { getAiProvider, resolveModel, aiHeaders, describeAiError } from "../../lib/ai.js";
 
 // ============================================================
 //  LOADER — plan + remaining scans
@@ -130,21 +131,19 @@ function normalizeResult(parsed, mode) {
 
 async function analyzeImageWithAI({ imageFile, mode, plan }) {
   const { aiModel, aiMaxTokens } = plan;
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error('No OPENAI_API_KEY');
+  // Works with either an OpenAI key or an OpenRouter key (detected by prefix).
+  const provider = getAiProvider();
+  if (!provider) throw new Error('No OPENAI_API_KEY');
 
   const arrayBuffer = await imageFile.arrayBuffer();
   const base64 = Buffer.from(arrayBuffer).toString('base64');
   const dataUrl = `data:${imageFile.type || 'image/jpeg'};base64,${base64}`;
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+  const response = await fetch(provider.url, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`,
-    },
+    headers: aiHeaders(provider),
     body: JSON.stringify({
-      model: aiModel,
+      model: resolveModel(aiModel, provider),
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         {
@@ -161,7 +160,7 @@ async function analyzeImageWithAI({ imageFile, mode, plan }) {
   });
 
   const data = await response.json();
-  if (data.error) throw new Error(data.error.message);
+  if (data.error) throw new Error(describeAiError(data, provider));
 
   const raw = data.choices?.[0]?.message?.content;
   if (!raw) throw new Error('Empty AI response');

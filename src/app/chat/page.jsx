@@ -3,6 +3,7 @@ import { Form, useNavigation, useActionData, Link, useLoaderData } from "react-r
 import { ArrowLeft, Send, Bot, User, Loader2, Paperclip, Crown, Zap, AlertCircle } from "lucide-react";
 import { ACTIONS, getLimit as getLimitFromPlans } from "../../lib/plans.js";
 import { checkLimit, consumeUsage, getUsage, getUserPlan, getUserIdFromRequest } from "../../lib/usage.js";
+import { getAiProvider, resolveModel, aiHeaders, describeAiError } from "../../lib/ai.js";
 
 // --- LOADER: read plan and usage ---
 export async function loader({ request }) {
@@ -35,8 +36,9 @@ export async function action({ request }) {
   // Ia userId din cookie
   const userId = getUserIdFromRequest(request);
 
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return { error: "No API Key found. Contact support." };
+  // Works with either an OpenAI key or an OpenRouter key (detected by prefix).
+  const provider = getAiProvider();
+  if (!provider) return { error: "No API Key found. Contact support." };
 
   // === FREEMIUM CHECK (logic centralized in src/lib/usage.js) ===
   const check = await checkLimit(userId, ACTIONS.CHAT);
@@ -74,14 +76,11 @@ export async function action({ request }) {
   }
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch(provider.url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-      },
+      headers: aiHeaders(provider),
       body: JSON.stringify({
-        model: model,
+        model: resolveModel(model, provider),
         messages: [
           {
             role: "system",
@@ -94,7 +93,7 @@ export async function action({ request }) {
     });
 
     const data = await response.json();
-    if (data.error) return { error: data.error.message };
+    if (data.error) return { error: describeAiError(data, provider) };
     
     const reply = data.choices[0].message.content;
 
