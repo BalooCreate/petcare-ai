@@ -133,7 +133,10 @@ async function analyzeImageWithAI({ imageFile, mode, plan }) {
   const { aiModel, aiMaxTokens } = plan;
   // Works with either an OpenAI key or an OpenRouter key (detected by prefix).
   const provider = getAiProvider();
-  if (!provider) throw new Error('No OPENAI_API_KEY');
+  if (!provider) {
+    console.error("[scan] No AI key configured. Add OPENAI_API_KEY in Render → Environment.");
+    throw new Error('AI unavailable');
+  }
 
   const arrayBuffer = await imageFile.arrayBuffer();
   const base64 = Buffer.from(arrayBuffer).toString('base64');

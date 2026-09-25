@@ -38,7 +38,13 @@ export async function action({ request }) {
 
   // Works with either an OpenAI key or an OpenRouter key (detected by prefix).
   const provider = getAiProvider();
-  if (!provider) return { error: "No API Key found. Contact support." };
+  if (!provider) {
+    console.error(
+      "[chat] No AI key configured. Add OPENAI_API_KEY in Render → Environment " +
+      "(an sk-or-... key from openrouter.ai/keys works, even with a $0 balance on :free models)."
+    );
+    return { error: AI_UNAVAILABLE_MESSAGE };
+  }
 
   // === FREEMIUM CHECK (logic centralized in src/lib/usage.js) ===
   const check = await checkLimit(userId, ACTIONS.CHAT);
