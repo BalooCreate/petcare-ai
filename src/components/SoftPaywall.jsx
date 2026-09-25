@@ -18,7 +18,7 @@ export default function SoftPaywall({ reason, limit, used, upgradeTo, onClose })
               <Sparkles size={24} />
             </div>
             <div>
-              <h3 className="font-bold text-lg leading-tight">Ai atins limita gratuită</h3>
+              <h3 className="font-bold text-lg leading-tight">You reached the free limit</h3>
               <p className="text-green-100 text-sm">{used}/{limit} folosite luna asta</p>
             </div>
           </div>
@@ -31,9 +31,9 @@ export default function SoftPaywall({ reason, limit, used, upgradeTo, onClose })
         <div className="p-6">
           <div className="text-center mb-6">
             <h4 className="font-extrabold text-xl text-gray-900 mb-1">
-              Deblochează nelimitat
+              Unlock unlimited
             </h4>
-            <p className="text-gray-500 text-sm">pentru doar o singură plată</p>
+            <p className="text-gray-500 text-sm">for a single one-time payment</p>
           </div>
 
           {/* Offer */}
@@ -48,7 +48,7 @@ export default function SoftPaywall({ reason, limit, used, upgradeTo, onClose })
               </div>
               <div>
                 <h5 className="font-bold text-gray-900">Starter Lifetime</h5>
-                <p className="text-xs text-gray-500">Plată unică, acces pe viață</p>
+                <p className="text-xs text-gray-500">One-time payment, lifetime access</p>
               </div>
             </div>
 
@@ -59,8 +59,8 @@ export default function SoftPaywall({ reason, limit, used, upgradeTo, onClose })
             </div>
 
             <ul className="space-y-2 text-sm text-gray-700 mb-4">
-              <li className="flex gap-2"><span className="text-green-600">✓</span> 3 animale, 100 AI/lună</li>
-              <li className="flex gap-2"><span className="text-green-600">✓</span> Scan nelimitat, fără reclame</li>
+              <li className="flex gap-2"><span className="text-green-600">✓</span> 3 pets, 100 AI questions/month</li>
+              <li className="flex gap-2"><span className="text-green-600">✓</span> Unlimited scans, no ads</li>
               <li className="flex gap-2"><span className="text-green-600">✓</span> Export PDF + suport prioritar</li>
             </ul>
 
@@ -68,18 +68,18 @@ export default function SoftPaywall({ reason, limit, used, upgradeTo, onClose })
               to="/pricing" 
               className="block w-full bg-green-600 hover:bg-green-700 text-white text-center font-bold py-3.5 rounded-xl transition shadow-lg shadow-green-200"
             >
-              Deblochează pentru $29 pe viață 🚀
+              Unlock for $29 lifetime 🚀
             </Link>
-            <p className="text-[11px] text-center text-gray-400 mt-2.5">Garanție 30 zile • Plată securizată Stripe</p>
+            <p className="text-[11px] text-center text-gray-400 mt-2.5">30-day guarantee • Secure Stripe payment</p>
           </div>
 
           {/* Secondary option */}
           <Link to="/pricing" className="block text-center text-sm text-gray-500 hover:text-gray-700 py-2">
-            Vezi toate planurile →
+            See all plans →
           </Link>
 
           <button onClick={onClose} className="block w-full text-center text-sm text-gray-400 hover:text-gray-600 py-2 mt-1">
-            Continuă cu planul gratuit
+            Continue with the free plan
           </button>
         </div>
       </div>
@@ -87,7 +87,7 @@ export default function SoftPaywall({ reason, limit, used, upgradeTo, onClose })
   );
 }
 
-// Varianta mică pentru banner inline
+// Small inline banner variant
 export function LimitBanner({ used, limit, type }) {
   const percentage = (used / limit) * 100;
   const isWarning = percentage >= 80;
@@ -99,7 +99,7 @@ export function LimitBanner({ used, limit, type }) {
           <span className="text-xs font-bold text-gray-700">
             {type === 'ai' ? 'AI Chats' : 'Scans'}: {used}/{limit}
           </span>
-          {isWarning && <span className="text-[10px] bg-orange-500 text-white px-1.5 py-0.5 rounded-full font-bold">APROAPE LIMITĂ</span>}
+          {isWarning && <span className="text-[10px] bg-orange-500 text-white px-1.5 py-0.5 rounded-full font-bold">ALMOST AT LIMIT</span>}
         </div>
         <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
           <div 

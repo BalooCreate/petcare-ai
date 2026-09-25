@@ -69,7 +69,7 @@ export const links = () => [
 ];
 
 /* -------------------------------------------
-   COMPONENTĂ EROARE
+   ERROR COMPONENT
 -------------------------------------------- */
 function ErrorDisplay({ error }: { error: unknown }) {
   let message = "An unexpected error occurred.";
@@ -187,7 +187,7 @@ export default function App() {
       navigator.serviceWorker
         .register("/service-worker.js")
         .then((registration) => {
-          console.log("PWA Service Worker înregistrat cu succes:", registration.scope);
+          console.log("PWA Service Worker registered successfully:", registration.scope);
         })
         .catch((error) => {
           console.log("Service Worker info:", error);

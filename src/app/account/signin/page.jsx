@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { PawPrint, Mail, Lock, Loader2 } from "lucide-react";
-import { useAuth } from "../../../utils/useAuth"; // ✅ Cale relativă corectă
+import { useAuth } from "../../../utils/useAuth"; // ✅ Correct relative path
 
 export default function SignIn() {
   const [loading, setLoading] = useState(false);
@@ -11,7 +11,7 @@ export default function SignIn() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    // Simulăm login
+    // Simulate login
     setTimeout(() => {
       navigate("/dashboard");
     }, 1000);

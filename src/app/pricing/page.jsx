@@ -1,24 +1,24 @@
 import { Link } from "react-router";
 import { Check, ArrowLeft, Sparkles, Heart, Zap, Crown, X } from "lucide-react";
 
-// NOU MODEL FREEMIUM - FARA CARD NECESAR PENTRU FREE
+// FREEMIUM MODEL - NO CREDIT CARD NEEDED FOR FREE
 const PLANS = {
   free: {
     id: "free",
     name: "Free Forever",
     price: "$0",
-    period: "pentru totdeauna",
-    description: "Perfect să începi",
-    cta: "Începe Gratis - Fără Card",
+    period: "forever",
+    description: "Perfect to get started",
+    cta: "Start Free — No Card",
     link: "/signup?plan=free",
     popular: false,
     features: [
-      "1 Animal de companie",
+      "1 Pet",
       "10 Health Logs",
-      "5 întrebări AI / lună",
-      "3 Smart Scan / lună",
-      "Calendar de bază",
-      "Cu reclame discrete"
+      "5 AI questions / month",
+      "3 smart scans / month",
+      "Basic calendar",
+      "With discreet ads"
     ],
     buttonStyle: "border-2 border-gray-200 text-gray-700 hover:border-green-600 hover:text-green-600"
   },
@@ -26,24 +26,24 @@ const PLANS = {
     id: "starter_monthly",
     name: "Starter",
     price: "$4.99",
-    period: "/lună",
+    period: "/month",
     lifetimePrice: "$29",
-    lifetimeText: "o singură dată, pe viață",
-    description: "Cel mai popular",
-    cta: "Ia Lifetime $29",
-    ctaSecondary: "$4.99/lună",
+    lifetimeText: "one-time payment, lifetime access",
+    description: "Most popular",
+    cta: "Get Lifetime $29",
+    ctaSecondary: "$4.99/month",
     link: "/signup?plan=starter_lifetime",
     linkMonthly: "/signup?plan=starter_monthly",
     popular: true,
     badge: "🔥 Best Value",
     features: [
-      "Până la 3 animale",
-      "100 întrebări AI / lună",
-      "Scan nelimitat",
-      "Fără reclame",
-      "Export PDF pentru vet",
-      "Suport prioritar",
-      "GPT-4o complet"
+      "Up to 3 pets",
+      "100 AI questions / month",
+      "Unlimited scans",
+      "No ads",
+      "PDF export for your vet",
+      "Priority support",
+      "Full GPT-4o"
     ],
     buttonStyle: "bg-green-600 text-white hover:bg-green-700 shadow-lg shadow-green-200"
   },
@@ -51,23 +51,23 @@ const PLANS = {
     id: "pro",
     name: "Pro Family",
     price: "$9.99",
-    period: "/lună",
+    period: "/month",
     lifetimePrice: "$49",
-    lifetimeText: "pe viață, animale nelimitate",
-    description: "Pentru familii & crescători",
-    cta: "Ia Lifetime $49",
-    ctaSecondary: "$9.99/lună",
+    lifetimeText: "lifetime access, unlimited pets",
+    description: "For families & breeders",
+    cta: "Get Lifetime $49",
+    ctaSecondary: "$9.99/month",
     link: "/signup?plan=pro_lifetime",
     linkMonthly: "/signup?plan=pro_monthly",
     popular: false,
     features: [
-      "Animale NELIMITATE",
-      "AI NELIMITAT",
-      "Istoric complet",
-      "Share cu familie + vet",
+      "UNLIMITED pets",
+      "UNLIMITED AI",
+      "Full history",
+      "Share with family + vet",
       "24/7 Priority AI",
       "API access",
-      "Totul din Starter"
+      "Everything in Starter"
     ],
     buttonStyle: "bg-gray-900 text-white hover:bg-black"
   }
@@ -80,29 +80,29 @@ export default function Pricing() {
         
         <div className="text-center mb-12">
             <Link to="/" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-green-600 mb-8 bg-white px-4 py-2 rounded-full shadow-sm border">
-                <ArrowLeft size={16} /> Înapoi Acasă
+                <ArrowLeft size={16} /> Back to Home
             </Link>
             
             <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-4">
-              <Heart size={12} fill="currentColor" /> 100% Gratis pentru început
+              <Heart size={12} fill="currentColor" /> 100% free to start
             </div>
             
             <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4 tracking-tight">
-              Începe Gratis, <br/>
-              <span className="text-green-600">Plătești doar dacă îți place</span> 🐾
+              Start free, <br/>
+              <span className="text-green-600">pay only if you love it</span> 🐾
             </h1>
             <p className="text-lg text-gray-500 max-w-2xl mx-auto">
-              Fără card necesar pentru planul gratuit. <br/>
-              <span className="font-bold text-gray-700">Upgrade opțional</span> doar când ai nevoie de mai mult.
+              No credit card needed for the free plan. <br/>
+              <span className="font-bold text-gray-700">Upgrade optional</span> only when you need more.
             </p>
 
             {/* Toggle Lifetime vs Monthly */}
             <div className="mt-8 inline-flex bg-gray-100 p-1 rounded-full">
               <div className="bg-white shadow px-6 py-2 rounded-full text-sm font-bold text-gray-900 flex items-center gap-2">
-                <Zap size={16} className="text-orange-500" /> Lifetime - Plată unică (Recomandat)
+                <Zap size={16} className="text-orange-500" /> Lifetime — one-time payment (Recommended)
               </div>
             </div>
-            <p className="text-xs text-gray-400 mt-2">Economisești 80% față de abonament lunar</p>
+            <p className="text-xs text-gray-400 mt-2">Save 80% compared to a monthly subscription</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-start">
@@ -130,7 +130,7 @@ export default function Pricing() {
                 <Link to={PLANS.free.link} className={`block w-full py-3.5 text-center font-bold rounded-xl transition ${PLANS.free.buttonStyle}`}>
                     {PLANS.free.cta}
                 </Link>
-                <p className="text-[11px] text-center text-gray-400 mt-3">Fără card • Activare instant</p>
+                <p className="text-[11px] text-center text-gray-400 mt-3">No card • Instant activation</p>
             </div>
 
             {/* STARTER - MOST POPULAR */}
@@ -150,10 +150,10 @@ export default function Pricing() {
                       <span className="text-gray-500 text-sm line-through">$120</span>
                   </div>
                   <p className="text-sm font-bold text-green-600">{PLANS.starter.lifetimeText}</p>
-                  <p className="text-xs text-gray-400 mt-1">sau {PLANS.starter.price}{PLANS.starter.period}</p>
+                  <p className="text-xs text-gray-400 mt-1">or {PLANS.starter.price}{PLANS.starter.period}</p>
                 </div>
                 
-                <p className="text-sm text-gray-600 mb-6 mt-4 font-medium">Perfect pentru 90% dintre stăpâni</p>
+                <p className="text-sm text-gray-600 mb-6 mt-4 font-medium">Perfect for 90% of pet parents</p>
                 
                 <ul className="space-y-3 mb-8">
                     {PLANS.starter.features.map((f,i) => (
@@ -168,13 +168,13 @@ export default function Pricing() {
                     {PLANS.starter.cta} 🚀
                 </Link>
                 <Link to={PLANS.starter.linkMonthly} className="block w-full py-2.5 text-center text-sm text-gray-500 hover:text-gray-700 font-medium mt-2">
-                    sau {PLANS.starter.ctaSecondary} / lună
+                    or {PLANS.starter.ctaSecondary} / month
                 </Link>
                 
                 <div className="mt-4 bg-green-50 rounded-xl p-3 flex gap-2">
                   <div className="text-green-600 mt-0.5">✓</div>
                   <p className="text-xs text-green-800 leading-relaxed">
-                    <strong>Garanție 30 zile.</strong> Nu îți place? Îți dăm banii înapoi, fără întrebări.
+                    <strong>30-day guarantee.</strong> Don't like it? Full refund, no questions asked.
                   </p>
                 </div>
             </div>
@@ -194,10 +194,10 @@ export default function Pricing() {
                       <span className="text-gray-500 text-sm line-through">$240</span>
                   </div>
                   <p className="text-sm font-bold text-orange-400">{PLANS.pro.lifetimeText}</p>
-                  <p className="text-xs text-gray-500 mt-1">sau {PLANS.pro.price}{PLANS.pro.period}</p>
+                  <p className="text-xs text-gray-500 mt-1">or {PLANS.pro.price}{PLANS.pro.period}</p>
                 </div>
                 
-                <p className="text-sm text-gray-400 mb-6 mt-4">Pentru familii cu multe animale</p>
+                <p className="text-sm text-gray-400 mb-6 mt-4">For families with many pets</p>
                 
                 <ul className="space-y-3 mb-8 relative">
                     {PLANS.pro.features.map((f,i) => (
@@ -211,7 +211,7 @@ export default function Pricing() {
                     {PLANS.pro.cta}
                 </Link>
                 <Link to={PLANS.pro.linkMonthly} className="block w-full py-2.5 text-center text-sm text-gray-400 hover:text-white font-medium mt-2 relative">
-                    sau {PLANS.pro.ctaSecondary} / lună
+                    or {PLANS.pro.ctaSecondary} / month
                 </Link>
             </div>
 
@@ -220,29 +220,29 @@ export default function Pricing() {
         {/* FAQ + TRUST */}
         <div className="mt-16 max-w-3xl mx-auto">
           <div className="bg-white rounded-2xl border p-6 shadow-sm">
-            <h3 className="font-bold text-gray-900 mb-4 text-center">Întrebări frecvente</h3>
+            <h3 className="font-bold text-gray-900 mb-4 text-center">Frequently asked questions</h3>
             <div className="grid md:grid-cols-2 gap-6 text-sm">
               <div>
-                <p className="font-bold text-gray-800 mb-1">Chiar e gratis pentru totdeauna?</p>
-                <p className="text-gray-500">Da! Planul Free nu expiră niciodată. Fără card. Îl poți folosi cât vrei cu 1 animal.</p>
+                <p className="font-bold text-gray-800 mb-1">Is it really free forever?</p>
+                <p className="text-gray-500">Yes! The Free plan never expires. No card. Use it as long as you like with 1 pet.</p>
               </div>
               <div>
-                <p className="font-bold text-gray-800 mb-1">Ce înseamnă Lifetime?</p>
-                <p className="text-gray-500">Plătești o singură dată $29 sau $49 și ai acces pe viață. Fără abonament lunar.</p>
+                <p className="font-bold text-gray-800 mb-1">What does Lifetime mean?</p>
+                <p className="text-gray-500">You pay once — $29 or $49 — and get lifetime access. No monthly subscription.</p>
               </div>
               <div>
-                <p className="font-bold text-gray-800 mb-1">Pot face upgrade mai târziu?</p>
-                <p className="text-gray-500">Da, oricând. Datele tale rămân salvate. Upgrade-ul e instant.</p>
+                <p className="font-bold text-gray-800 mb-1">Can I upgrade later?</p>
+                <p className="text-gray-500">Yes, anytime. Your data stays saved. The upgrade is instant.</p>
               </div>
               <div>
-                <p className="font-bold text-gray-800 mb-1">Ce se întâmplă cu datele mele?</p>
-                <p className="text-gray-500">Sunt criptate și securizate. Le poți exporta oricând. Nu le vindem.</p>
+                <p className="font-bold text-gray-800 mb-1">What happens to my data?</p>
+                <p className="text-gray-500">They are encrypted and secure. You can export them anytime. We never sell them.</p>
               </div>
             </div>
           </div>
           
           <div className="text-center mt-8 text-xs text-gray-400">
-            <p>🔒 Plăți securizate prin Stripe • 💳 Card, Apple Pay, Google Pay • ↩️ Garanție 30 zile</p>
+            <p>🔒 Secure payments via Stripe • 💳 Card, Apple Pay, Google Pay • ↩️ 30-day guarantee</p>
           </div>
         </div>
 

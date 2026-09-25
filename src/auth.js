@@ -2,7 +2,7 @@ import { authHandler as honoAuthHandler } from "@hono/auth-js";
 import Google from "@auth/core/providers/google";
 import Credentials from "@auth/core/providers/credentials";
 
-// 1. Configurația de autentificare
+// 1. Authentication configuration
 const authConfig = {
   providers: [
     Google({
@@ -30,9 +30,9 @@ const authConfig = {
 // 2. Handler-ul principal pentru rutele de auth (/api/auth/*)
 export const authHandler = honoAuthHandler(authConfig);
 
-// 3. ✅ FIX: Exportăm funcția 'auth' pe care o caută rutele API
-// Aceasta este un "placeholder" pentru ca build-ul să nu crape.
-// În viitor, logica din api/care-schedules va trebui mutată în loader-ul React Router.
+// 3. ✅ FIX: Export the 'auth' function that the API routes look for
+// This is a placeholder so the build does not crash.
+// In the future, the logic in api/care-schedules should move into a React Router loader.
 export const auth = async () => {
   return null; 
 };

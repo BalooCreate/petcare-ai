@@ -3,11 +3,10 @@ import { Form, redirect, useNavigation, useActionData, useNavigate, useSearchPar
 import { ArrowLeft, Camera, Plus, PawPrint, AlertCircle, Activity, Save, Crown, Gift, Check } from "lucide-react";
 import { Buffer } from "buffer";
 import sql from "../../api/utils/sql";
+import { checkPetLimit, getUserIdFromRequest } from "../../../lib/usage.js";
 
 export async function loader({ request }) {
-  const cookieHeader = request.headers.get("Cookie");
-  const userIdMatch = cookieHeader?.match(/user_id=([^;]+)/);
-  const userId = userIdMatch ? userIdMatch[1] : null;
+  const userId = getUserIdFromRequest(request);
 
   if (!userId) return { petsCount: 0, plan: 'free', welcome: false };
 
@@ -15,7 +14,7 @@ export async function loader({ request }) {
   const welcome = url.searchParams.get("welcome") === "true";
 
   try {
-    const pets = await sql`SELECT COUNT(*) as count FROM pets WHERE owner_id = ${userId} OR user_id = ${userId}`;
+    const pets = await sql`SELECT COUNT(*) as count FROM pets WHERE owner_id = ${userId}`;
     const userResult = await sql`SELECT plan FROM users WHERE id = ${userId}`;
     
     return {
@@ -29,9 +28,7 @@ export async function loader({ request }) {
 }
 
 export async function action({ request }) {
-  const cookieHeader = request.headers.get("Cookie");
-  const userIdMatch = cookieHeader?.match(/user_id=([^;]+)/);
-  const userId = userIdMatch ? userIdMatch[1] : null;
+  const userId = getUserIdFromRequest(request);
 
   if (!userId) return redirect("/login"); 
 
@@ -49,26 +46,25 @@ export async function action({ request }) {
   const photoFile = formData.get("photo");
   const species = formData.get("species") || "dog"; 
 
-  if (!name) return { error: "Numele animalului este obligatoriu!" };
+  if (!name) return { error: "Pet name is required!" };
 
-  // === FREEMIUM CHECK: câte animale are deja? ===
+  // === FREEMIUM CHECK: how many pets do they already have? ===
   try {
-    const petsCountResult = await sql`SELECT COUNT(*) as count FROM pets WHERE owner_id = ${userId} OR user_id = ${userId}`;
+    const petsCountResult = await sql`SELECT COUNT(*) as count FROM pets WHERE owner_id = ${userId}`;
     const petsCount = parseInt(petsCountResult[0]?.count || 0);
     
     const userResult = await sql`SELECT plan FROM users WHERE id = ${userId}`;
     const plan = userResult[0]?.plan || 'free';
     
-    let limit = 1;
-    if (plan === 'starter') limit = 3;
-    else if (plan === 'pro') limit = 9999;
+    // checkPetLimit() centralizes the limits from src/lib/plans.js
+    const petCheck = await checkPetLimit(userId, petsCount);
 
-    if (petsCount >= limit) {
-      return { 
+    if (!petCheck.allowed) {
+      return {
         error: `LIMIT_REACHED`,
-        message: `Ai atins limita de ${limit} ${limit === 1 ? 'animal' : 'animale'} pentru planul ${plan === 'free' ? 'Free' : plan}. Fă upgrade la ${limit === 1 ? 'Starter $29' : 'Pro $49'} pentru mai mult!`,
-        limit,
-        plan
+        message: petCheck.message,
+        limit: petCheck.limit,
+        plan: petCheck.plan,
       };
     }
   } catch (e) {
@@ -84,7 +80,7 @@ export async function action({ request }) {
   let image_url = null;
 
   if (photoFile && photoFile.size > 0) {
-    if (photoFile.size > 2000000) return { error: "Poza prea mare (max 2MB)." };
+    if (photoFile.size > 2000000) return { error: "Photo too large (max 2MB)." };
     try {
         const arrayBuffer = await photoFile.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
@@ -133,7 +129,7 @@ export default function AddPetPage() {
     if (file) setPreview(URL.createObjectURL(file));
   };
 
-  // Dacă a atins limita
+  // If the limit was reached
   if (actionData?.error === 'LIMIT_REACHED') {
     return (
       <div className="min-h-screen bg-gray-50 p-4 flex justify-center items-center font-sans">
@@ -141,7 +137,7 @@ export default function AddPetPage() {
           <div className="bg-orange-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
             <Crown size={32} className="text-orange-600" />
           </div>
-          <h2 className="text-xl font-bold mb-2">Limită atinsă! 🐾</h2>
+          <h2 className="text-xl font-bold mb-2">Limit reached! 🐾</h2>
           <p className="text-sm text-gray-600 mb-6">{actionData.message}</p>
           
           <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-5 mb-4 text-left">
@@ -149,16 +145,16 @@ export default function AddPetPage() {
               <Gift size={16} /> Starter Lifetime - $29
             </h3>
             <ul className="text-xs text-gray-700 space-y-1.5 mb-4">
-              <li className="flex gap-2"><Check size={14} className="text-green-600" /> 3 animale în loc de 1</li>
-              <li className="flex gap-2"><Check size={14} className="text-green-600" /> 100 AI chats/lună</li>
-              <li className="flex gap-2"><Check size={14} className="text-green-600" /> Fără reclame, pe viață</li>
+              <li className="flex gap-2"><Check size={14} className="text-green-600" /> 3 pets instead of 1</li>
+              <li className="flex gap-2"><Check size={14} className="text-green-600" /> 100 AI chats/month</li>
+              <li className="flex gap-2"><Check size={14} className="text-green-600" /> No ads, lifetime access</li>
             </ul>
             <Link to="/pricing" className="block w-full bg-green-600 text-white text-center font-bold py-3 rounded-xl hover:bg-green-700">
-              Vezi planurile - de la $29 🚀
+              See plans — from $29 🚀
             </Link>
           </div>
           
-          <Link to="/dashboard" className="text-sm text-gray-400 hover:text-gray-600">← Înapoi la dashboard</Link>
+          <Link to="/dashboard" className="text-sm text-gray-400 hover:text-gray-600">← Back to dashboard</Link>
         </div>
       </div>
     );
@@ -177,9 +173,9 @@ export default function AddPetPage() {
                 </button>
                 <div>
                     <h1 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                        {welcome ? "Bun venit! Adaugă primul animal 🎉" : "Adaugă animal nou"}
+                        {welcome ? "Welcome! Add your first pet 🎉" : "Add a new pet"}
                     </h1>
-                    {welcome && <p className="text-xs text-green-600 font-medium">Pasul 1 din 1 • Gratis, 20 secunde</p>}
+                    {welcome && <p className="text-xs text-green-600 font-medium">Step 1 of 1 • Free, 20 seconds</p>}
                 </div>
              </div>
              <div className="bg-green-50 p-2 rounded-full hidden sm:block">
@@ -190,7 +186,7 @@ export default function AddPetPage() {
         {welcome && (
           <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 flex items-center gap-3 text-sm">
             <Gift size={18} className="shrink-0" />
-            <span><strong>Felicitări!</strong> Contul tău gratuit e gata. Adaugă primul animal și primești 5 întrebări AI gratuite luna asta.</span>
+            <span><strong>Congratulations!</strong> Your free account is ready. Add your first pet and get 5 free AI questions this month.</span>
           </div>
         )}
 
@@ -224,14 +220,14 @@ export default function AddPetPage() {
                                 </label>
                             </div>
                             <div className="text-left lg:text-center">
-                                <p className="text-sm font-bold text-gray-700">Poză profil</p>
-                                <p className="text-xs text-gray-400">Apasă + pentru a încărca</p>
+                                <p className="text-sm font-bold text-gray-700">Profile photo</p>
+                                <p className="text-xs text-gray-400">Tap + to upload</p>
                             </div>
                         </div>
 
                         <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
-                          <p className="text-xs font-bold text-blue-800 mb-1">💡 De ce să adaugi animalul?</p>
-                          <p className="text-[11px] text-blue-600 leading-relaxed">AI-ul va da sfaturi personalizate în funcție de rasă, vârstă și greutate. Cu cât profilul e mai complet, cu atât sfaturile sunt mai bune.</p>
+                          <p className="text-xs font-bold text-blue-800 mb-1">💡 Why add your pet?</p>
+                          <p className="text-[11px] text-blue-600 leading-relaxed">The AI gives personalized advice based on breed, age and weight. The more complete the profile, the better the advice.</p>
                         </div>
                     </div>
 
@@ -240,32 +236,32 @@ export default function AddPetPage() {
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="md:col-span-2">
-                                <label className="text-xs font-bold text-gray-700 ml-1">Nume animal <span className="text-red-500">*</span></label>
-                                <input type="text" name="name" className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white mt-1" placeholder="Ex: Max, Luna, Rex" required />
+                                <label className="text-xs font-bold text-gray-700 ml-1">Pet name <span className="text-red-500">*</span></label>
+                                <input type="text" name="name" className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white mt-1" placeholder="e.g. Max, Luna, Rex" required />
                             </div>
                             
                             <div>
-                                <label className="text-xs font-bold text-gray-700 ml-1">Specie</label>
+                                <label className="text-xs font-bold text-gray-700 ml-1">Species</label>
                                 <select name="species" className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white mt-1">
-                                    <option value="dog">🐶 Câine</option>
-                                    <option value="cat">🐱 Pisică</option>
-                                    <option value="bird">🐦 Pasăre</option>
-                                    <option value="other">🐾 Altul</option>
+                                    <option value="dog">🐶 Dog</option>
+                                    <option value="cat">🐱 Cat</option>
+                                    <option value="bird">🐦 Bird</option>
+                                    <option value="other">🐾 Other</option>
                                 </select>
                             </div>
                             <div>
-                                <label className="text-xs font-bold text-gray-700 ml-1">Rasă</label>
+                                <label className="text-xs font-bold text-gray-700 ml-1">Breed</label>
                                 <input type="text" name="breed" className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white mt-1" placeholder="Ex: Labrador, Bichon" />
                             </div>
 
                             <div>
-                                <label className="text-xs font-bold text-gray-700 ml-1">Data nașterii</label>
+                                <label className="text-xs font-bold text-gray-700 ml-1">Date of birth</label>
                                 <input type="date" name="birth_date" className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white mt-1" />
                             </div>
                             
                             <div>
                                 <label className="text-xs font-bold text-gray-700 ml-1 flex justify-between">
-                                    <span>Greutate</span>
+                                    <span>Weight</span>
                                     <span className="text-[10px] text-gray-400 font-normal">{unit.toUpperCase()}</span>
                                 </label>
                                 <div className="flex border border-gray-200 rounded-xl bg-gray-50 overflow-hidden focus-within:ring-2 focus-within:ring-green-500 focus-within:bg-white mt-1">
@@ -287,24 +283,24 @@ export default function AddPetPage() {
                             </div>
 
                             <div className="md:col-span-2">
-                                <label className="text-xs font-bold text-gray-700 ml-1">Alergii / Condiții speciale</label>
-                                <input type="text" name="allergies" className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white mt-1" placeholder="Ex: alergie la pui, displazie" />
+                                <label className="text-xs font-bold text-gray-700 ml-1">Allergies / Special conditions</label>
+                                <input type="text" name="allergies" className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white mt-1" placeholder="e.g. chicken allergy, hip dysplasia" />
                             </div>
 
                             <div className="md:col-span-2">
-                                <label className="text-xs font-bold text-gray-700 ml-1">Detalii extra (opțional)</label>
-                                <textarea name="details" rows="3" className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white mt-1 resize-none" placeholder="Orice vrei să știe AI-ul despre animalul tău..."></textarea>
+                                <label className="text-xs font-bold text-gray-700 ml-1">Extra details (optional)</label>
+                                <textarea name="details" rows="3" className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white mt-1 resize-none" placeholder="Anything you want the AI to know about your pet..."></textarea>
                             </div>
                         </div>
 
                         <div className="flex gap-3 pt-2">
-                          <button type="button" onClick={() => navigate("/dashboard")} className="flex-1 py-3 rounded-xl border border-gray-200 font-bold text-sm hover:bg-gray-50">Anulează</button>
+                          <button type="button" onClick={() => navigate("/dashboard")} className="flex-1 py-3 rounded-xl border border-gray-200 font-bold text-sm hover:bg-gray-50">Cancel</button>
                           <button type="submit" disabled={isSubmitting} className="flex-[2] bg-green-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-green-700 flex items-center justify-center gap-2 shadow-lg shadow-green-200 disabled:opacity-50">
-                            {isSubmitting ? "Se salvează..." : <><Save size={16} /> Salvează animalul</>}
+                            {isSubmitting ? "Saving..." : <><Save size={16} /> Save pet</>}
                           </button>
                         </div>
 
-                        <p className="text-[11px] text-center text-gray-400">Poți adăuga mai multe animale după - 1 gratis, 3 cu Starter $29, nelimitat cu Pro $49</p>
+                        <p className="text-[11px] text-center text-gray-400">You can add more pets later — 1 free, 3 with Starter $29, unlimited with Pro $49</p>
                     </div>
                 </div>
             </Form>

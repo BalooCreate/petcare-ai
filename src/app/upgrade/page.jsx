@@ -9,7 +9,7 @@ export default function UpgradePage() {
         <Link to="/dashboard" className="p-2 hover:bg-gray-100 rounded-full text-gray-600 transition">
           <ArrowLeft size={18} />
         </Link>
-        <span className="font-bold text-sm">Upgrade - Alege planul Lifetime</span>
+        <span className="font-bold text-sm">Upgrade — Pick your Lifetime plan</span>
       </div>
       <PricingPage />
     </div>

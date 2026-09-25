@@ -10,10 +10,15 @@ export async function loader({ request }) {
 
   if (!userId) return redirect("/login");
 
-  const users = await sql`SELECT * FROM users WHERE id = ${userId}`;
-  if (users.length === 0) return redirect("/login");
+  try {
+    const users = await sql`SELECT * FROM users WHERE id = ${userId}`;
+    if (!users.length) return redirect("/login");
 
-  return { user: users[0] };
+    return { user: users[0] };
+  } catch (e) {
+    console.error("Settings loader error:", e.message);
+    return redirect("/login");
+  }
 }
 
 export async function action({ request }) {
@@ -67,7 +72,7 @@ export default function SettingsPage() {
         <div className="bg-white rounded-2xl shadow-xl border border-green-100 overflow-hidden">
             <div className="grid grid-cols-1 md:grid-cols-3">
                 
-                {/* STÂNGA: Sidebar Info (Compact) */}
+                {/* LEFT: Info sidebar (compact) */}
                 <div className="bg-green-50/50 p-6 md:border-r border-green-100 text-center md:text-left">
                     <div className="w-16 h-16 bg-white rounded-full mx-auto md:mx-0 mb-3 flex items-center justify-center text-green-600 border border-green-200 shadow-sm">
                         <User size={28} />

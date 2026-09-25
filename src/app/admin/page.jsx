@@ -4,31 +4,36 @@ import sql from "../api/utils/sql";
 
 // --- BACKEND: Securitate & Date ---
 export async function loader({ request }) {
-  // 1. Verificăm utilizatorul
+  // 1. Verify the user
   const cookieHeader = request.headers.get("Cookie");
   const userIdMatch = cookieHeader?.match(/user_id=([^;]+)/);
   const userId = userIdMatch ? userIdMatch[1] : null;
 
   if (!userId) return redirect("/login");
 
-  // 2. Verificăm dacă e ADMIN
+  // 2. Verify they are an ADMIN
   const user = await sql`SELECT is_admin FROM users WHERE id = ${userId}`;
   if (!user[0] || !user[0].is_admin) {
-    return redirect("/dashboard"); // Îl dăm afară dacă nu e admin
+    return redirect("/dashboard"); // Kick them out if not an admin
   }
 
-  // 3. Luăm datele existente (ca să le putem șterge)
-  const products = await sql`SELECT * FROM products ORDER BY id DESC`;
-  const coupons = await sql`SELECT * FROM coupons ORDER BY id DESC`;
+  // 3. Fetch existing data (so we can delete it)
+  try {
+    const products = await sql`SELECT * FROM products ORDER BY id DESC`;
+    const coupons = await sql`SELECT * FROM coupons ORDER BY id DESC`;
 
-  return { products, coupons };
+    return { products: products || [], coupons: coupons || [] };
+  } catch (e) {
+    console.error("Admin loader error:", e.message);
+    return { products: [], coupons: [] };
+  }
 }
 
 export async function action({ request }) {
   const formData = await request.formData();
   const intent = formData.get("intent");
 
-  // --- ADĂUGARE PRODUS ---
+  // --- ADD PRODUCT ---
   if (intent === "add_product") {
     const title = formData.get("title");
     const price = formData.get("price");
@@ -38,7 +43,7 @@ export async function action({ request }) {
     const category = formData.get("category");
     const is_daily_deal = formData.get("is_daily_deal") === "on"; // Checkbox
 
-    // Dacă e Daily Deal, le resetăm pe celelalte
+    // If it is a Daily Deal, reset the others
     if (is_daily_deal) {
         await sql`UPDATE products SET is_daily_deal = FALSE`;
     }
@@ -49,7 +54,7 @@ export async function action({ request }) {
     `;
   }
 
-  // --- ADĂUGARE CUPON ---
+  // --- ADD COUPON ---
   if (intent === "add_coupon") {
     const store_name = formData.get("store_name");
     const code = formData.get("code");
@@ -63,7 +68,7 @@ export async function action({ request }) {
     `;
   }
 
-  // --- ȘTERGERE ---
+  // --- DELETE ---
   if (intent === "delete_product") {
     await sql`DELETE FROM products WHERE id = ${formData.get("id")}`;
   }

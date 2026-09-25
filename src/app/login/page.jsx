@@ -1,6 +1,7 @@
 import { Form, redirect, useActionData, Link } from "react-router";
 import { PawPrint, Mail, Lock, LogIn } from "lucide-react";
 import sql from "../api/utils/sql";
+import { ensureSchema } from "../../lib/usage.js";
 
 // --- BACKEND: Login Check (Neschimbat) ---
 export async function action({ request }) {
@@ -11,6 +12,9 @@ export async function action({ request }) {
   if (!email || !password) return { error: "Please enter email and password!" };
 
   try {
+    // Ensure the schema matches what the app expects (safe, idempotent)
+    await ensureSchema();
+
     const users = await sql`SELECT * FROM users WHERE email = ${email} AND password = ${password}`;
     
     if (users.length === 0) {
@@ -41,7 +45,7 @@ export default function LoginPage() {
       
       <div className="mb-8 text-center">
         <Link to="/" className="bg-white p-3 rounded-full inline-block mb-3 shadow-md hover:shadow-lg transition border border-green-100">
-            {/* Iconița acum iese în evidență pe alb */}
+            {/* The icon now stands out on white */}
             <PawPrint className="text-green-600" size={32} />
         </Link>
         <h1 className="text-3xl font-extrabold text-gray-800 tracking-tight">Welcome Back!</h1>
@@ -63,7 +67,7 @@ export default function LoginPage() {
                 <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider ml-1">Email Address</label>
                 <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Mail size={18} className="text-green-600/60" /> {/* Iconiță ușor verzuie */}
+                        <Mail size={18} className="text-green-600/60" /> {/* Slightly green icon */}
                     </div>
                     <input 
                         type="email" 

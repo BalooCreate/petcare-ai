@@ -1,18 +1,18 @@
-// Un hook simplu pentru acțiunile de autentificare
+// A simple hook for authentication actions
 export const useAuth = () => {
   const signIn = async (provider) => {
-    // În mod normal aici ai redirecționa către ruta de API
-    // Pentru demo, simulăm un redirect către dashboard
+    // Normally you would redirect to the API route here
+    // For the demo, we simulate a redirect to the dashboard
     window.location.href = "/dashboard";
   };
 
   const signOut = async () => {
-    // Simulăm logout-ul
+    // Simulate logout
     window.location.href = "/";
   };
 
   const signUp = async (email, password) => {
-    // Simulăm înregistrarea
+    // Simulate signup
     window.location.href = "/dashboard";
   };
 

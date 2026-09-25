@@ -2,14 +2,21 @@ import { Form, useLoaderData, redirect, Link, useNavigate, useNavigation } from 
 import { ArrowLeft, Save, PawPrint, Activity, ImageIcon, FileText } from "lucide-react";
 import sql from "../../../api/utils/sql";
 
-// 1. Încărcăm datele existente
+// 1. Load the existing data
 export async function loader({ params }) {
-  const result = await sql`SELECT * FROM pets WHERE id = ${params.id}`;
-  if (!result.length) throw new Response("Not Found", { status: 404 });
-  return { pet: result[0] };
+  try {
+    const result = await sql`SELECT * FROM pets WHERE id = ${params.id}`;
+    if (!result.length) throw new Response("Not Found", { status: 404 });
+    return { pet: result[0] };
+  } catch (e) {
+    // Re-throw real HTTP responses (like the 404 above) — those are intentional.
+    if (e instanceof Response) throw e;
+    console.error("Pet edit loader error:", e.message);
+    throw new Response("Could not load this pet", { status: 500 });
+  }
 }
 
-// 2. Salvăm modificările (UPDATE)
+// 2. Save the changes (UPDATE)
 export async function action({ request, params }) {
   const formData = await request.formData();
   
@@ -59,7 +66,7 @@ export default function EditPetPage() {
                 </button>
                 <div>
                     <h1 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                        Editează Profilul
+                        Edit Profile
                         <span className="text-xs font-normal text-green-700 bg-green-100 px-2 py-0.5 rounded-full border border-green-200">
                             {pet.name}
                         </span>
@@ -76,10 +83,10 @@ export default function EditPetPage() {
             
             <Form method="post" id="edit-form" className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
                 
-                {/* COLOANA STÂNGA: Identitate & Imagine */}
+                {/* LEFT COLUMN: Identity & Photo */}
                 <div className="space-y-5">
                     
-                    {/* Preview Imagine (Opțional, doar vizual) */}
+                    {/* Image preview (optional, visual only) */}
                     <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-xl border border-gray-100">
                         <div className="w-16 h-16 rounded-full bg-white border border-gray-200 overflow-hidden flex items-center justify-center shrink-0">
                             {pet.image_url ? (
@@ -89,7 +96,7 @@ export default function EditPetPage() {
                             )}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <label className="text-xs font-bold text-gray-700 block mb-1">URL Imagine Profil</label>
+                            <label className="text-xs font-bold text-gray-700 block mb-1">Profile Image URL</label>
                             <div className="relative">
                                 <ImageIcon size={14} className="absolute left-3 top-2.5 text-gray-400" />
                                 <input 
@@ -104,7 +111,7 @@ export default function EditPetPage() {
 
                     <div className="space-y-4">
                         <div>
-                            <label className="text-xs font-bold text-gray-700 ml-1 block mb-1">Nume Animal <span className="text-red-500">*</span></label>
+                            <label className="text-xs font-bold text-gray-700 ml-1 block mb-1">Pet Name <span className="text-red-500">*</span></label>
                             <input 
                                 name="name" 
                                 defaultValue={pet.name} 
@@ -115,20 +122,20 @@ export default function EditPetPage() {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="text-xs font-bold text-gray-700 ml-1 block mb-1">Specie</label>
+                                <label className="text-xs font-bold text-gray-700 ml-1 block mb-1">Species</label>
                                 <select 
                                     name="species" 
                                     defaultValue={pet.species} 
                                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white"
                                 >
-                                    <option value="dog">Câine</option>
-                                    <option value="cat">Pisică</option>
-                                    <option value="bird">Pasăre</option>
-                                    <option value="other">Altul</option>
+                                    <option value="dog">Dog</option>
+                                    <option value="cat">Cat</option>
+                                    <option value="bird">Bird</option>
+                                    <option value="other">Other</option>
                                 </select>
                             </div>
                             <div>
-                                <label className="text-xs font-bold text-gray-700 ml-1 block mb-1">Rasă</label>
+                                <label className="text-xs font-bold text-gray-700 ml-1 block mb-1">Breed</label>
                                 <input 
                                     name="breed" 
                                     defaultValue={pet.breed} 
@@ -168,7 +175,7 @@ export default function EditPetPage() {
                             name="details" 
                             defaultValue={pet.details} 
                             className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white resize-none h-32" 
-                            placeholder="Detalii despre sănătate, alergii sau comportament..."
+                            placeholder="Health details, allergies or behaviour..."
                         />
                     </div>
 
@@ -183,7 +190,7 @@ export default function EditPetPage() {
                 to={`/pets/${pet.id}`}
                 className="px-6 py-2.5 bg-white border border-gray-200 hover:bg-gray-100 text-gray-600 font-bold rounded-full text-sm transition text-center"
             >
-                Anulează
+                Cancel
             </Link>
             <button 
                 type="submit" 
@@ -191,7 +198,7 @@ export default function EditPetPage() {
                 disabled={isSubmitting}
                 className="px-8 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-full text-sm shadow-md flex items-center gap-2 transition transform hover:-translate-y-0.5 disabled:opacity-70"
             >
-                {isSubmitting ? "Se salvează..." : <>Salvează Modificările <Save size={16} /></>}
+                {isSubmitting ? "Saving..." : <>Save Changes <Save size={16} /></>}
             </button>
         </div>
 

@@ -7,26 +7,26 @@ export default function InstallBanner() {
   const [isVisible, setIsVisible] = useState(false); // Ascuns by default
 
   useEffect(() => {
-    // 1. Verifică dacă e deja instalată
+    // 1. Check if already installed
     if (window.matchMedia('(display-mode: standalone)').matches) {
-      console.log("Aplicația este deja instalată.");
+      console.log("App is already installed.");
       setIsVisible(false);
       return;
     }
 
-    // 2. Detectează iOS (iPhone)
+    // 2. Detect iOS (iPhone)
     const isIosDevice = /iPhone|iPad|iPod/.test(navigator.userAgent);
     if (isIosDevice) {
         setIsIOS(true);
-        setIsVisible(true); // Pe iOS îl arătăm mereu
+        setIsVisible(true); // On iOS we always show it
     }
 
-    // 3. Capturează evenimentul pe Android / PC
+    // 3. Capture the event on Android / desktop
     const handler = (e) => {
       console.log("✅ Evenimentul 'beforeinstallprompt' a fost capturat!");
-      e.preventDefault(); // Oprește bannerul automat al browserului
-      setDeferredPrompt(e); // Salvăm evenimentul în variabilă
-      setIsVisible(true); // ACUM afișăm butonul nostru
+      e.preventDefault(); // Stop the browser's automatic banner
+      setDeferredPrompt(e); // Save the event in a variable
+      setIsVisible(true); // NOW we show our own button
     };
 
     window.addEventListener("beforeinstallprompt", handler);
@@ -35,15 +35,15 @@ export default function InstallBanner() {
   }, []);
 
   const handleInstallClick = async () => {
-    console.log("Ai apăsat butonul Install.");
+    console.log("Install button pressed.");
 
     if (!deferredPrompt) {
-        console.log("❌ Eroare: deferredPrompt este null. Arăt instrucțiunile PC.");
-        alert("Instalarea automată nu e disponibilă momentan.\nCaută iconița de instalare în bara de adresă a browserului.");
+        console.log("❌ Error: deferredPrompt is null. Showing desktop instructions.");
+        alert("Automatic install is not available right now.\nLook for the install icon in your browser address bar.");
         return;
     }
 
-    console.log("🚀 Lansăm prompt-ul de instalare...");
+    console.log("🚀 Launching install prompt...");
     deferredPrompt.prompt();
 
     const { outcome } = await deferredPrompt.userChoice;
@@ -72,23 +72,23 @@ export default function InstallBanner() {
             </div>
             
             <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-base">Instalează Aplicația</h3>
+                <h3 className="font-bold text-base">Install the App</h3>
                 
                 {isIOS ? (
                     <div className="text-xs text-green-50 mt-1 leading-relaxed">
-                        Apasă butonul <Share size={12} className="inline mx-1" /> și alege <br/>
+                        Tap the <Share size={12} className="inline mx-1" /> button and choose <br/>
                         <b>Add to Home Screen</b>
                     </div>
                 ) : (
                     <div className="flex flex-col gap-2 mt-2">
                         <p className="text-xs text-green-100">
-                            Acces rapid și experiență full-screen.
+                            Fast access and a full-screen experience.
                         </p>
                         <button 
                             onClick={handleInstallClick}
                             className="bg-white text-green-700 px-4 py-2 rounded-md font-bold text-sm shadow hover:bg-gray-100 transition w-full active:scale-95"
                         >
-                            INSTALEAZĂ ACUM
+                            INSTALL NOW
                         </button>
                     </div>
                 )}

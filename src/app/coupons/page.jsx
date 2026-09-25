@@ -3,35 +3,38 @@ import { ArrowLeft, Lock, Copy, ExternalLink, Crown, CheckCircle, TicketPercent 
 import { useState } from "react";
 import sql from "../api/utils/sql";
 
-// ⚠️ ID-ul planului de $25 din Stripe
-const VIP_PLAN_ID = "price_1SXSTjGCoG5d3tHJF1MjCqpm"; 
+// VIP rewards are a perk for paying members.
+// NOTE: users.plan stores "free" | "starter" | "pro" — never a Stripe price id.
+// This page used to compare against an old Stripe price id, so it never matched.
+const VIP_PLANS = ["starter", "pro"];
+
+const PLACEHOLDER_COUPONS = [
+    { store_name: 'Chewy',   discount_amount: '20%',  description: 'Unlock to see code', logo_bg_color: 'bg-blue-600' },
+    { store_name: 'Petco',   discount_amount: '15%',  description: 'Unlock to see code', logo_bg_color: 'bg-red-600' },
+    { store_name: 'BarkBox', discount_amount: 'FREE', description: 'Unlock to see code', logo_bg_color: 'bg-blue-400' },
+    { store_name: 'Amazon',  discount_amount: '10%',  description: 'Unlock to see code', logo_bg_color: 'bg-yellow-500' },
+];
 
 export async function loader({ request }) {
   const cookieHeader = request.headers.get("Cookie");
   const userIdMatch = cookieHeader?.match(/user_id=([^;]+)/);
   const userId = userIdMatch ? userIdMatch[1] : null;
 
-  if (!userId) return { isVip: false, coupons: [] };
+  if (!userId) return { isVip: false, coupons: PLACEHOLDER_COUPONS };
 
-  const userResult = await sql`SELECT plan FROM users WHERE id = ${userId}`;
-  const userPlan = userResult[0]?.plan;
+  try {
+    const userResult = await sql`SELECT plan FROM users WHERE id = ${userId}`;
+    const userPlan = userResult[0]?.plan || 'free';
+    const isVip = VIP_PLANS.includes(userPlan);
 
-  const isVip = userPlan === VIP_PLAN_ID || userPlan === 'greatdane';
+    if (!isVip) return { isVip: false, coupons: PLACEHOLDER_COUPONS };
 
-  let coupons = [];
-  if (isVip) {
-    coupons = await sql`SELECT * FROM coupons ORDER BY id DESC`;
-  } else {
-    // Date false pentru efectul vizual din spate
-    coupons = [
-        { store_name: 'Chewy', discount_amount: '20%', description: 'Unlock to see code', logo_bg_color: 'bg-blue-600' },
-        { store_name: 'Petco', discount_amount: '15%', description: 'Unlock to see code', logo_bg_color: 'bg-red-600' },
-        { store_name: 'BarkBox', discount_amount: 'FREE', description: 'Unlock to see code', logo_bg_color: 'bg-blue-400' },
-        { store_name: 'Amazon', discount_amount: '10%', description: 'Unlock to see code', logo_bg_color: 'bg-yellow-500' },
-    ];
+    const coupons = await sql`SELECT * FROM coupons ORDER BY id DESC`;
+    return { isVip: true, coupons: coupons || [] };
+  } catch (e) {
+    console.error("Coupons loader error:", e.message);
+    return { isVip: false, coupons: PLACEHOLDER_COUPONS };
   }
-
-  return { isVip, coupons };
 }
 
 export default function CouponsPage() {
@@ -66,7 +69,7 @@ export default function CouponsPage() {
             </div>
         </div>
 
-        {/* ZONA PRINCIPALĂ */}
+        {/* MAIN AREA */}
         <div className="relative">
             
             {/* BLUR OVERLAY (LOCK SCREEN) */}
@@ -76,11 +79,10 @@ export default function CouponsPage() {
                         <Lock size={48} className="text-green-600" />
                     </div>
                     
-                    {/* 👇 AICI AM SCHIMBAT TEXTUL */}
-                    <h2 className="text-3xl font-extrabold text-gray-900 mb-3">Unlock Exclusive Rewards</h2>
+                                        <h2 className="text-3xl font-extrabold text-gray-900 mb-3">Unlock Exclusive Rewards</h2>
                     
                     <p className="text-gray-500 max-w-md mb-8 leading-relaxed">
-                        Upgrade to the <strong>Great Dane Plan ($25/mo)</strong> to access exclusive coupon codes for Chewy, Petco, and Amazon.
+                        Upgrade to <strong>Starter Lifetime ($29)</strong> or <strong>Pro Lifetime ($49)</strong> — one-time payment — to unlock exclusive coupon codes for Chewy, Petco, and Amazon.
                     </p>
                     <Link to="/pricing" className="bg-gray-900 hover:bg-black text-white font-bold py-4 px-10 rounded-xl shadow-lg transition transform hover:scale-105 flex items-center gap-2">
                         Upgrade Now <Crown size={18} className="text-yellow-400 fill-yellow-400" />

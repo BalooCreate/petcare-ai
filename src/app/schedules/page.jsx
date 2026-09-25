@@ -11,10 +11,16 @@ export async function loader({ request }) {
 
   if (!userId) return redirect("/login");
 
-  const schedules = await sql`SELECT * FROM schedules ORDER BY date ASC`;
-  const pets = await sql`SELECT name FROM pets WHERE owner_id = ${userId}`;
-  
-  return { schedules, pets, userId };
+  // Graceful degradation: a database hiccup must not 500 the page.
+  try {
+    const schedules = await sql`SELECT * FROM schedules WHERE owner_id = ${userId} ORDER BY date ASC`;
+    const pets = await sql`SELECT name FROM pets WHERE owner_id = ${userId}`;
+
+    return { schedules: schedules || [], pets: pets || [], userId };
+  } catch (e) {
+    console.error("Schedules loader error:", e.message);
+    return { schedules: [], pets: [], userId };
+  }
 }
 
 export async function action({ request }) {
@@ -25,9 +31,14 @@ export async function action({ request }) {
   const type = formData.get("type");
   const notes = formData.get("notes");
 
+  const cookieHeader = request.headers.get("Cookie");
+  const userIdMatch = cookieHeader?.match(/user_id=([^;]+)/);
+  const userId = userIdMatch ? userIdMatch[1] : null;
+  if (!userId) return redirect("/login");
+
   await sql`
-    INSERT INTO schedules (title, pet_name, date, type, notes)
-    VALUES (${title}, ${pet_name}, ${date}, ${type}, ${notes})
+    INSERT INTO schedules (title, pet_name, date, type, notes, owner_id)
+    VALUES (${title}, ${pet_name}, ${date}, ${type}, ${notes}, ${userId})
   `;
 
   // Email logic (Resend)
@@ -90,14 +101,14 @@ export default function SchedulesPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
-          {/* COLOANA STÂNGA: LISTA (Rămâne mare) */}
+          {/* LEFT COLUMN: LIST (stays large) */}
           <div className="lg:col-span-2 order-2 lg:order-1 space-y-3">
              {schedules.length === 0 ? (
                 <div className="text-center py-10 bg-white rounded-2xl border border-green-100 shadow-sm flex flex-col items-center">
                     <div className="bg-green-50 w-12 h-12 rounded-full flex items-center justify-center mb-2">
                         <Calendar size={24} className="text-green-500" />
                     </div>
-                    <h3 className="text-sm font-bold text-gray-900">No schedules</h3>
+                    <h3 className="text-sm font-bold text-gray-900">No schedules yet</h3>
                     <p className="text-xs text-gray-400">Add a task on the right.</p>
                 </div>
              ) : (
@@ -125,7 +136,7 @@ export default function SchedulesPage() {
              )}
           </div>
 
-          {/* COLOANA DREAPTA: FORMULAR COMPACT (FĂRĂ SCROLL) */}
+          {/* RIGHT COLUMN: COMPACT FORM (NO SCROLL) */}
           <div className="lg:col-span-1 order-1 lg:order-2">
             <div className="bg-white p-5 rounded-2xl shadow-lg border border-green-100 sticky top-4">
                
@@ -144,7 +155,7 @@ export default function SchedulesPage() {
                    <input type="text" name="title" required placeholder="e.g. Vet Checkup" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-green-500 outline-none bg-gray-50 focus:bg-white" />
                  </div>
 
-                 {/* Rând: Pet + Type (Side by Side pentru spațiu) */}
+                 {/* Row: Pet + Type (side by side to save space) */}
                  <div className="grid grid-cols-2 gap-3">
                      <div>
                        <label className="block text-[10px] font-bold text-gray-500 mb-1 ml-1 uppercase">Pet</label>
@@ -164,7 +175,7 @@ export default function SchedulesPage() {
                     </div>
                  </div>
 
-                 {/* Dată */}
+                 {/* Date */}
                  <div>
                     <label className="block text-[10px] font-bold text-gray-500 mb-1 ml-1 uppercase">Date & Time</label>
                     <input type="datetime-local" name="date" required className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:bg-white focus:ring-1 focus:ring-green-500 outline-none text-gray-600" />

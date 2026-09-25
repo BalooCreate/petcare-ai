@@ -1,8 +1,8 @@
 import { redirect } from "react-router";
 
-// Această funcție rulează automat când intri pe /logout
+// This function runs automatically when you visit /logout
 export async function loader() {
-  // Ștergem cookie-ul setându-i durata de viață la 0
+  // Delete the cookie by setting its lifetime to 0
   return redirect("/", {
     headers: {
       "Set-Cookie": "user_id=; Path=/; HttpOnly; Max-Age=0",
@@ -11,5 +11,5 @@ export async function loader() {
 }
 
 export default function LogoutPage() {
-  return null; // Nu afișăm nimic, doar redirecționăm
+  return null; // Render nothing, just redirect
 }

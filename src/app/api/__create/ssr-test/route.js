@@ -12,7 +12,7 @@ function serializeClean(err) {
   err.stack = cleanStack(err.stack, {
     pretty: true,
     pathFilter: (p) => {
-      // Eliminăm liniile care nu țin de codul sursă
+      // Strip lines that are not part of the source code
       return !p.includes("node_modules") && !p.includes("dist");
     },
   });

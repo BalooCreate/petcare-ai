@@ -24,7 +24,7 @@ export async function action({ params, request }) {
   }
 }
 
-// Helper pentru vârstă
+// Age helper
 function getAge(dateString) {
   if (!dateString) return "N/A";
   const today = new Date();
@@ -35,7 +35,7 @@ function getAge(dateString) {
   return age > 0 ? `${age} years` : "<1 year";
 }
 
-// Helper pentru activitate (Iconiță + Text + Culoare)
+// Activity helper (icon + label + color)
 function getActivityBadge(level) {
     switch (level) {
         case 'low': return { text: "Low / Chill", color: "bg-blue-100 text-blue-700", icon: "🛋️" };
@@ -90,7 +90,7 @@ export default function PetProfilePage() {
                         )}
                     </div>
                     
-                    {/* Nume & Specie */}
+                    {/* Name & Species */}
                     <div className="relative z-10 mb-6">
                         <h1 className="text-3xl font-extrabold text-gray-900 capitalize mb-1">{pet.name}</h1>
                         <span className="inline-flex items-center gap-1 bg-green-100 text-green-800 text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider">

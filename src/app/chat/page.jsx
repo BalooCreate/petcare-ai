@@ -1,25 +1,25 @@
 import { useState, useEffect, useRef } from "react";
 import { Form, useNavigation, useActionData, Link, useLoaderData } from "react-router";
 import { ArrowLeft, Send, Bot, User, Loader2, Paperclip, Crown, Zap, AlertCircle } from "lucide-react";
-import sql from "../api/utils/sql";
+import { ACTIONS, getLimit as getLimitFromPlans } from "../../lib/plans.js";
+import { checkLimit, consumeUsage, getUsage, getUserPlan, getUserIdFromRequest } from "../../lib/usage.js";
 
-// --- LOADER: Ia planul și usage-ul ---
+// --- LOADER: read plan and usage ---
 export async function loader({ request }) {
-  const cookieHeader = request.headers.get("Cookie");
-  const userIdMatch = cookieHeader?.match(/user_id=([^;]+)/);
-  const userId = userIdMatch ? userIdMatch[1] : null;
+  const userId = getUserIdFromRequest(request);
 
   if (!userId) return { usage: { ai_chats_used: 0 }, plan: 'free', userId: null };
 
   try {
-    const userResult = await sql`SELECT plan FROM users WHERE id = ${userId}`;
-    const usageResult = await sql`SELECT * FROM usage_limits WHERE user_id = ${userId}`.catch(() => []);
+    // getUsage() automatically resets the counter at the start of each month
+    const [usageRow, plan] = await Promise.all([getUsage(userId), getUserPlan(userId)]);
     return {
-      usage: usageResult[0] || { ai_chats_used: 0 },
-      plan: userResult[0]?.plan || 'free',
+      usage: usageRow || { ai_chats_used: 0 },
+      plan,
       userId
     };
   } catch (e) {
+    console.error("Chat loader error", e);
     return { usage: { ai_chats_used: 0 }, plan: 'free', userId };
   }
 }
@@ -33,52 +33,32 @@ export async function action({ request }) {
   if (!prompt && (!imageFile || imageFile.size === 0)) return null;
 
   // Ia userId din cookie
-  const cookieHeader = request.headers.get("Cookie");
-  const userIdMatch = cookieHeader?.match(/user_id=([^;]+)/);
-  const userId = userIdMatch ? userIdMatch[1] : null;
+  const userId = getUserIdFromRequest(request);
 
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return { error: "No API Key found. Contact support." };
 
-  // === FREEMIUM CHECK ===
-  let userPlan = 'free';
-  let aiLimit = 5;
-  let aiUsed = 0;
+  // === FREEMIUM CHECK (logic centralized in src/lib/usage.js) ===
+  const check = await checkLimit(userId, ACTIONS.CHAT);
+  const userPlan = check.plan;
+  const aiLimit = check.limit;
+  const aiUsed = check.used;
 
-  if (userId) {
-    try {
-      const userResult = await sql`SELECT plan FROM users WHERE id = ${userId}`;
-      userPlan = userResult[0]?.plan || 'free';
-      
-      const usageResult = await sql`SELECT * FROM usage_limits WHERE user_id = ${userId}`.catch(() => []);
-      aiUsed = usageResult[0]?.ai_chats_used || 0;
-
-      if (userPlan === 'free') aiLimit = 5;
-      else if (userPlan === 'starter') aiLimit = 100;
-      else aiLimit = 9999;
-
-      // Verifică limita
-      if (aiUsed >= aiLimit) {
-        return { 
-          error: `LIMIT_REACHED`,
-          limit: aiLimit,
-          used: aiUsed,
-          plan: userPlan,
-          message: userPlan === 'free' 
-            ? `Ai folosit ${aiUsed}/${aiLimit} întrebări gratuite luna asta. Deblochează 100/lună pentru $29 pe viață!`
-            : `Ai atins limita de ${aiLimit} întrebări. Treci la Pro pentru nelimitat.`
-        };
-      }
-    } catch (e) {
-      console.error("Freemium check error", e);
-    }
+  if (!check.allowed) {
+    return {
+      error: `LIMIT_REACHED`,
+      limit: check.limit,
+      used: check.used,
+      plan: check.plan,
+      message: check.message,
+    };
   }
 
-  // Alege modelul în funcție de plan - ECONOMIE MARE
+  // Pick the model based on plan — BIG cost savings
   const model = userPlan === 'free' ? 'gpt-4o-mini' : 'gpt-4o';
-  // gpt-4o-mini e 33x mai ieftin decât gpt-4o, perfect pentru free users
+  // gpt-4o-mini is 33x cheaper than gpt-4o, perfect for free users
 
-  // Pregătim mesajul pentru OpenAI
+  // Build the OpenAI message
   let content = [{ type: "text", text: prompt || "Analyze this image for me." }];
 
   if (imageFile && imageFile.size > 0) {
@@ -105,7 +85,7 @@ export async function action({ request }) {
         messages: [
           {
             role: "system",
-            content: `You are PetAssistant, an expert AI Veterinarian. Give concise, helpful, empathetic advice about pet health, nutrition, behavior. If image provided, analyze visually for symptoms. Always advise seeing real vet for serious issues. Language: respond in same language as user (Romanian or English). Keep answers short but useful (max 200 words).`
+            content: `You are PetAssistant, an expert AI Veterinarian. Give concise, helpful, empathetic advice about pet health, nutrition, behavior. If image provided, analyze visually for symptoms. Always advise seeing real vet for serious issues. Language: always respond in English, unless the user clearly writes in another language (then reply in that language). Keep answers short but useful (max 200 words).`
           },
           { role: "user", content: content }
         ],
@@ -118,28 +98,14 @@ export async function action({ request }) {
     
     const reply = data.choices[0].message.content;
 
-    // Incrementează usage după succes
-    if (userId) {
-      try {
-        await sql`
-          INSERT INTO usage_limits (user_id, ai_chats_used, scans_used, reset_date)
-          VALUES (${userId}, 1, 0, NOW() + INTERVAL '1 month')
-          ON CONFLICT (user_id) 
-          DO UPDATE SET ai_chats_used = usage_limits.ai_chats_used + 1, updated_at = NOW()
-        `;
-      } catch (e) {
-        // Dacă tabela nu există sau eroare, încearcă update simplu
-        try {
-          await sql`UPDATE usage_limits SET ai_chats_used = ai_chats_used + 1 WHERE user_id = ${userId}`;
-        } catch {}
-      }
-    }
+    // Increment usage after success
+    await consumeUsage(userId, ACTIONS.CHAT);
 
     return { reply, model, usage: { used: aiUsed + 1, limit: aiLimit, plan: userPlan } };
 
   } catch (err) {
     console.error(err);
-    return { error: "Failed to connect to AI. Încearcă din nou." };
+    return { error: "Failed to connect to AI. Please try again." };
   }
 }
 
@@ -151,7 +117,7 @@ export default function ChatPage() {
   const isSending = navigation.state === "submitting";
   
   const [messages, setMessages] = useState([
-    { role: "ai", text: "Salut! Sunt AI Veterinarul tău 🐾\n\nPoți să mă întrebi orice despre animalul tău sau să trimiți o poză pentru analiză.\n\n💡 Sfat: Spune-mi ce animal ai și ce problemă are." }
+    { role: "ai", text: "Hi! I'm your AI Vet 🐾\n\nAsk me anything about your pet, or send a photo for analysis.\n\n💡 Tip: Tell me what pet you have and what's going on." }
   ]);
   
   const [input, setInput] = useState("");
@@ -164,7 +130,7 @@ export default function ChatPage() {
   const plan = loaderData?.plan || 'free';
   const isFree = plan === 'free';
   const aiUsed = loaderData?.usage?.ai_chats_used || 0;
-  const aiLimit = isFree ? 5 : plan === 'starter' ? 100 : 9999;
+  const aiLimit = getLimitFromPlans(plan, ACTIONS.CHAT);
 
   useEffect(() => {
     if (actionData?.reply) {
@@ -180,7 +146,7 @@ export default function ChatPage() {
           isLimit: true 
         }]);
       } else {
-        setMessages(prev => [...prev, { role: "ai", text: "⚠️ Eroare: " + actionData.error }]);
+        setMessages(prev => [...prev, { role: "ai", text: "⚠️ Error: " + actionData.error }]);
       }
     }
   }, [actionData]);
@@ -195,10 +161,10 @@ export default function ChatPage() {
         return;
     }
     
-    // Verificare locală rapidă
+    // Quick local check
     if (isFree && aiUsed >= aiLimit) {
       e.preventDefault();
-      setPaywallData({ limit: aiLimit, used: aiUsed, plan: 'free', message: `Ai folosit ${aiUsed}/${aiLimit} întrebări gratuite luna asta.` });
+      setPaywallData({ limit: aiLimit, used: aiUsed, plan: 'free', message: `You used ${aiUsed}/${aiLimit} free questions this month.` });
       setShowPaywall(true);
       return;
     }
@@ -234,11 +200,11 @@ export default function ChatPage() {
                   <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></span>
               </div>
               <div>
-                  <h1 className="font-bold text-gray-900 leading-none text-sm">Vet Expert AI</h1>
+                  <h1 className="font-bold text-gray-900 leading-none text-sm">AI Vet Expert</h1>
                   <p className="text-[11px] text-gray-500 mt-0.5">
-                    {isFree ? `${aiUsed}/${aiLimit} gratis luna asta • ` : ''} 
+                    {isFree ? `${aiUsed}/${aiLimit} free this month • ` : ''} 
                     <span className={isFree ? 'text-orange-600 font-bold' : 'text-green-600'}>{isFree ? 'Free' : plan === 'starter' ? 'Starter Lifetime' : 'Pro'}</span>
-                    {isFree && aiUsed >= aiLimit - 1 && <span className="text-red-500 font-bold"> • Limită aproape</span>}
+                    {isFree && aiUsed >= aiLimit - 1 && <span className="text-red-500 font-bold"> • Almost at limit</span>}
                   </p>
               </div>
           </div>
@@ -251,12 +217,12 @@ export default function ChatPage() {
         )}
       </div>
 
-      {/* USAGE BAR - doar pentru free */}
+      {/* USAGE BAR — free plan only */}
       {isFree && (
         <div className="bg-white border-b border-gray-100 px-4 py-2 flex items-center gap-3">
           <div className="flex-1">
             <div className="flex justify-between text-[11px] mb-1">
-              <span className="text-gray-500 font-medium">AI Chats gratuite</span>
+              <span className="text-gray-500 font-medium">free AI chats</span>
               <span className={`font-bold ${aiUsed >= aiLimit ? 'text-red-600' : aiUsed >= 3 ? 'text-orange-600' : 'text-gray-700'}`}>{aiUsed}/{aiLimit}</span>
             </div>
             <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
@@ -296,7 +262,7 @@ export default function ChatPage() {
                     {msg.isLimit && (
                       <div className="mt-3">
                         <Link to="/pricing" className="inline-flex bg-gray-900 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-black">
-                          Deblochează pentru $29 pe viață 🚀
+                          Unlock for $29 lifetime 🚀
                         </Link>
                       </div>
                     )}
@@ -317,7 +283,7 @@ export default function ChatPage() {
                 </div>
                 <div className="bg-white p-4 rounded-2xl border border-gray-100 rounded-tl-none flex items-center gap-2">
                     <Loader2 size={16} className="animate-spin text-green-600" />
-                    <span className="text-xs text-gray-400 font-medium">AI analizează...</span>
+                    <span className="text-xs text-gray-400 font-medium">AI is analyzing...</span>
                 </div>
             </div>
         )}
@@ -332,12 +298,12 @@ export default function ChatPage() {
               <div className="bg-white/20 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
                 <Crown size={24} className="text-yellow-300" />
               </div>
-              <h3 className="font-bold text-lg">Ai atins limita gratuită</h3>
-              <p className="text-green-100 text-sm mt-1">{paywallData?.used || aiUsed}/{paywallData?.limit || aiLimit} întrebări folosite luna asta</p>
+              <h3 className="font-bold text-lg">You reached the free limit</h3>
+              <p className="text-green-100 text-sm mt-1">{paywallData?.used || aiUsed}/{paywallData?.limit || aiLimit} questions used this month</p>
             </div>
             <div className="p-6">
               <p className="text-sm text-gray-600 text-center mb-4">
-                {paywallData?.message || `Ai folosit toate întrebările gratuite. Deblochează 100/lună pentru doar $29 pe viață!`}
+                {paywallData?.message || `You used all your free questions. Unlock 100/month for just $29 lifetime!`}
               </p>
               
               <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-4">
@@ -347,17 +313,17 @@ export default function ChatPage() {
                   <span className="text-[10px] bg-red-500 text-white px-1.5 py-0.5 rounded-full font-bold">-76%</span>
                 </div>
                 <ul className="text-xs text-gray-700 space-y-1 mb-3">
-                  <li>✓ 100 întrebări AI / lună</li>
-                  <li>✓ GPT-4o complet, fără reclame</li>
-                  <li>✓ Pe viață, plată unică</li>
+                  <li>✓ 100 AI questions / month</li>
+                  <li>✓ Full GPT-4o, no ads</li>
+                  <li>✓ Lifetime access, one-time payment</li>
                 </ul>
                 <Link to="/pricing" className="block w-full bg-green-600 text-white text-center font-bold py-3 rounded-xl hover:bg-green-700">
-                  Deblochează $29 pe viață 🚀
+                  Unlock $29 lifetime 🚀
                 </Link>
               </div>
 
               <button onClick={() => setShowPaywall(false)} className="w-full text-center text-sm text-gray-400 hover:text-gray-600 py-2">
-                Continuă cu planul gratuit
+                Continue with free plan
               </button>
             </div>
           </div>
@@ -400,7 +366,7 @@ export default function ChatPage() {
                     <textarea 
                         name="prompt"
                         rows="1"
-                        placeholder={isFree && aiUsed >= aiLimit ? "Limită atinsă - fă upgrade pentru a continua" : "Întreabă ceva despre animalul tău..."}
+                        placeholder={isFree && aiUsed >= aiLimit ? "Limit reached — upgrade to continue" : "Ask something about your pet..."}
                         className="w-full bg-transparent outline-none text-sm resize-none text-gray-700 placeholder-gray-400"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
@@ -416,7 +382,7 @@ export default function ChatPage() {
                     <Send size={20} />
                 </button>
             </Form>
-            <p className="text-[10px] text-center text-gray-400 mt-2">AI-ul poate greși. Pentru probleme grave, consultă veterinarul.</p>
+            <p className="text-[10px] text-center text-gray-400 mt-2">AI can make mistakes. For serious issues, consult a real vet.</p>
          </div>
       </div>
 

@@ -5,11 +5,17 @@ import {
 } from "lucide-react";
 import sql from "../api/utils/sql";
 
-// --- BACKEND (Rămâne la fel) ---
+// --- BACKEND ---
 export async function loader() {
-  const logs = await sql`SELECT * FROM health_logs ORDER BY date DESC`;
-  const pets = await sql`SELECT name FROM pets`;
-  return { logs, pets };
+  // Graceful degradation: never 500 the whole page on a database hiccup.
+  try {
+    const logs = await sql`SELECT * FROM health_logs ORDER BY date DESC`;
+    const pets = await sql`SELECT name FROM pets`;
+    return { logs: logs || [], pets: pets || [] };
+  } catch (e) {
+    console.error("Health loader error:", e.message);
+    return { logs: [], pets: [] };
+  }
 }
 
 export async function action({ request }) {
@@ -21,11 +27,16 @@ export async function action({ request }) {
   const vet_name = formData.get("vet_name");
   const notes = formData.get("notes");
 
-  await sql`
-    INSERT INTO health_logs (title, pet_name, date, type, vet_name, notes)
-    VALUES (${title}, ${pet_name}, ${date}, ${type}, ${vet_name}, ${notes})
-  `;
-  return null;
+  try {
+    await sql`
+      INSERT INTO health_logs (title, pet_name, date, type, vet_name, notes)
+      VALUES (${title}, ${pet_name}, ${date}, ${type}, ${vet_name}, ${notes})
+    `;
+    return { ok: true };
+  } catch (e) {
+    console.error("Health action error:", e.message);
+    return { error: "Could not save the record. Please try again." };
+  }
 }
 
 // --- FRONTEND (REDESENAT) ---
@@ -70,7 +81,7 @@ export default function HealthPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
-          {/* COLOANA STÂNGA: LISTA (Mai lată) */}
+          {/* LEFT COLUMN: LIST (wider) */}
           <div className="lg:col-span-2 order-2 lg:order-1 space-y-3">
              {logs.length === 0 ? (
                 <div className="text-center py-12 bg-white rounded-2xl border border-green-100 shadow-sm flex flex-col items-center">
@@ -127,7 +138,7 @@ export default function HealthPage() {
              )}
           </div>
 
-          {/* COLOANA DREAPTA: FORMULAR (Compact, fără scroll) */}
+          {/* RIGHT COLUMN: FORM (compact, no scroll) */}
           <div className="lg:col-span-1 order-1 lg:order-2">
             <div className="bg-white p-5 rounded-2xl shadow-lg border border-green-100 sticky top-4">
                

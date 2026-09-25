@@ -5,7 +5,7 @@ const useUser = () => {
   const revalidator = useRevalidator();
 
   // --- MODIFICARE PENTRU TESTARE ---
-  // Simulăm un utilizator conectat ca să poți vedea Dashboard-ul
+  // Simulate a logged-in user so you can view the Dashboard
   const mockUser = {
     id: "user_123",
     name: "Alex PetOwner",
@@ -13,7 +13,7 @@ const useUser = () => {
     image: null
   };
 
-  // În mod normal aici ar fi: const user = rootData?.user;
+  // Normally this would be: const user = rootData?.user;
   // Dar pentru test, folosim mockUser:
   const user = mockUser; 
 

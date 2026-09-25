@@ -8,13 +8,20 @@ import sql from "../api/utils/sql";
 
 // --- BACKEND ---
 export async function loader() {
-  // 1. Luăm Oferta Zilei
-  const dailyDeal = await sql`SELECT * FROM products WHERE is_daily_deal = TRUE LIMIT 1`;
-  
-  // 2. Luăm toate celelalte produse
-  const products = await sql`SELECT * FROM products WHERE is_daily_deal = FALSE ORDER BY id DESC`;
+  // Graceful degradation: the shop must not take the whole page down
+  // if the database hiccups or the products table is empty.
+  try {
+    // 1. Fetch the Daily Deal
+    const dailyDeal = await sql`SELECT * FROM products WHERE is_daily_deal = TRUE LIMIT 1`;
 
-  return { deal: dailyDeal[0], allProducts: products };
+    // 2. Fetch all other products
+    const products = await sql`SELECT * FROM products WHERE is_daily_deal = FALSE ORDER BY id DESC`;
+
+    return { deal: dailyDeal[0] || null, allProducts: products || [] };
+  } catch (e) {
+    console.error("Shop loader error:", e.message);
+    return { deal: null, allProducts: [] };
+  }
 }
 
 // --- FRONTEND ---
@@ -22,7 +29,7 @@ export default function ShopPage() {
   const { deal, allProducts } = useLoaderData();
   const navigate = useNavigate();
   
-  // Stare pentru Căutare și Filtrare
+  // State for search and filtering
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const [timeLeft, setTimeLeft] = useState("");
@@ -101,7 +108,7 @@ export default function ShopPage() {
             </div>
         </div>
 
-        {/* 2. DAILY DEAL (Doar dacă nu se caută ceva specific) */}
+        {/* 2. DAILY DEAL (only when not searching for something specific) */}
         {deal && searchTerm === "" && activeCategory === "All" && (
             <div className="mb-10 bg-white rounded-[28px] border border-green-100 shadow-lg overflow-hidden relative">
                 <div className="absolute top-0 left-0 bg-red-500 text-white text-[10px] font-bold px-4 py-1 rounded-br-xl z-10 animate-pulse flex items-center gap-1">

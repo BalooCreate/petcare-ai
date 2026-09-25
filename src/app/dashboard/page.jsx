@@ -1,4 +1,6 @@
-import { useLoaderData, Link } from "react-router";
+import { useLoaderData, Link, redirect } from "react-router";
+import Stripe from "stripe";
+import { activatePlan, getUsage } from "../../lib/usage.js";
 import { 
   Plus, Calendar, Activity, Settings, 
   ShoppingBag, TicketPercent, ArrowRight, 
@@ -9,21 +11,62 @@ import InstallBanner from "../../components/InstallBanner";
 
 // --- BACKEND ---
 export async function loader({ request }) {
+  const url = new URL(request.url);
   const cookieHeader = request.headers.get("Cookie");
   const userIdMatch = cookieHeader?.match(/user_id=([^;]+)/);
-  const userId = userIdMatch ? userIdMatch[1] : null;
+  let userId = userIdMatch ? userIdMatch[1] : null;
+
+  // === STRIPE PAYMENT VERIFICATION (on return from checkout) ===
+  // Stripe sends us back with ?session_id=cs_xxx. We verify payment BEFORE
+  // granting the plan, so nobody gets a paid plan without paying.
+  const sessionId = url.searchParams.get("session_id");
+  if (sessionId && process.env.STRIPE_SECRET_KEY) {
+    try {
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      const isPaid =
+        session?.payment_status === "paid" || session?.status === "complete";
+
+      const metaUserId = session?.metadata?.userId;
+      const metaPlan = session?.metadata?.plan;
+      const metaType = session?.metadata?.type;
+      const customerId =
+        typeof session?.customer === "string" ? session.customer : null;
+
+      if (isPaid && metaUserId && metaPlan) {
+        // activatePlan() is idempotent: it will not rewrite if the plan is already active
+        const res = await activatePlan(metaUserId, metaPlan, {
+          type: metaType === "lifetime" ? "lifetime" : "monthly",
+          customerId,
+        });
+        if (!res.ok) {
+          console.error("activatePlan failed:", res.reason);
+        }
+
+        // Log the user in (cookie) and clean up the URL
+        return redirect(`/dashboard?upgraded=${metaPlan}`, {
+          headers: {
+            "Set-Cookie": `user_id=${metaUserId}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`,
+          },
+        });
+      }
+    } catch (e) {
+      console.error("Stripe session verification failed:", e.message);
+    }
+  }
+  // === END STRIPE PAYMENT VERIFICATION ===
 
   if (!userId) return { pets: [], user: null, usage: null, plan: 'free' };
 
   try {
-    const pets = await sql`SELECT * FROM pets WHERE owner_id = ${userId} OR user_id = ${userId}`;
+    const pets = await sql`SELECT * FROM pets WHERE owner_id = ${userId}`;
     const userResult = await sql`SELECT id, name, email, plan, plan_type, lifetime_paid FROM users WHERE id = ${userId}`;
-    const usageResult = await sql`SELECT * FROM usage_limits WHERE user_id = ${userId}`.catch(() => []);
+    const usageRow = await getUsage(userId);
     
     return { 
       pets: pets || [], 
       user: userResult[0] || null,
-      usage: usageResult[0] || { ai_chats_used: 0, scans_used: 0 },
+      usage: usageRow || { ai_chats_used: 0, scans_used: 0 },
       plan: userResult[0]?.plan || 'free'
     };
   } catch (e) {
@@ -90,14 +133,14 @@ export default function DashboardPage() {
 
         <InstallBanner />
 
-        {/* FREEMIUM USAGE BANNER - pentru FREE */}
+        {/* FREEMIUM USAGE BANNER — for FREE */}
         {isFree && (
           <div className="mb-6 bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-bold text-sm flex items-center gap-2">
-                <Gift size={16} className="text-green-600" /> Planul tău gratuit
+                <Gift size={16} className="text-green-600" /> Your free plan
               </h3>
-              <Link to="/pricing" className="text-xs font-bold text-green-600 hover:underline">Vezi Lifetime $29 →</Link>
+              <Link to="/pricing" className="text-xs font-bold text-green-600 hover:underline">Get Lifetime $29 →</Link>
             </div>
             
             <div className="grid grid-cols-3 gap-4">
@@ -112,7 +155,7 @@ export default function DashboardPage() {
               </div>
               <div>
                 <div className="flex justify-between text-[11px] mb-1">
-                  <span className="text-gray-500">Scanări</span>
+                  <span className="text-gray-500">Scans</span>
                   <span className="font-bold">{scansUsed}/{scanLimit}</span>
                 </div>
                 <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
@@ -121,7 +164,7 @@ export default function DashboardPage() {
               </div>
               <div>
                 <div className="flex justify-between text-[11px] mb-1">
-                  <span className="text-gray-500">Animale</span>
+                  <span className="text-gray-500">Pets</span>
                   <span className="font-bold">{pets.length}/{petLimit}</span>
                 </div>
                 <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
@@ -134,10 +177,10 @@ export default function DashboardPage() {
               <div className="mt-4 bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl p-3 flex items-center justify-between text-white">
                 <div className="flex items-center gap-2">
                   <Zap size={16} />
-                  <span className="text-xs font-bold">Îți place aplicația? Deblochează tot pentru $29 pe viață!</span>
+                  <span className="text-xs font-bold">Loving the app? Unlock everything for $29 lifetime!</span>
                 </div>
                 <Link to="/pricing" className="bg-white text-green-700 text-xs font-bold px-3 py-1 rounded-full hover:bg-green-50 transition shrink-0">
-                  Vezi oferta
+                  See the offer
                 </Link>
               </div>
             )}
@@ -149,13 +192,13 @@ export default function DashboardPage() {
           <div className="mb-6 bg-green-600 text-white rounded-2xl p-4 flex items-center gap-3 shadow-lg">
             <div className="bg-white/20 p-2 rounded-full"><Crown size={20} /></div>
             <div>
-              <p className="font-bold text-sm">🎉 Upgrade reușit! Mulțumim!</p>
-              <p className="text-xs text-green-100">Acum ai acces la toate funcțiile. Bucură-te de PetAssistant!</p>
+              <p className="font-bold text-sm">🎉 Upgrade successful! Thank you!</p>
+              <p className="text-xs text-green-100">You now have access to all features. Enjoy PetAssistant!</p>
             </div>
           </div>
         )}
 
-        {/* GRID ACȚIUNI */}
+        {/* ACTIONS GRID */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
             
             <Link to="/pets/add" className="bg-white p-5 rounded-2xl border border-green-100 shadow-sm hover:shadow-md hover:border-green-300 transition flex flex-col items-center text-center gap-2 group">
@@ -165,7 +208,7 @@ export default function DashboardPage() {
                 <div>
                     <h3 className="font-bold text-gray-900 text-sm">Add Pet</h3>
                     <p className="text-[10px] text-gray-400 uppercase tracking-wide">
-                      {isFree && pets.length >= petLimit ? `Limită ${petLimit} • Upgrade` : "New Profile"}
+                      {isFree && pets.length >= petLimit ? `Limit ${petLimit} • Upgrade` : "New Profile"}
                     </p>
                 </div>
             </Link>
@@ -200,7 +243,7 @@ export default function DashboardPage() {
                 <div>
                     <h3 className="font-bold text-gray-900 text-sm">Smart Scan</h3>
                     <p className="text-[10px] text-gray-400 uppercase tracking-wide">
-                      {isFree ? `${scansUsed}/${scanLimit} gratis` : "AI Tool"}
+                      {isFree ? `${scansUsed}/${scanLimit} free` : "AI Tool"}
                     </p>
                 </div>
             </Link>
@@ -215,7 +258,7 @@ export default function DashboardPage() {
                 <div>
                     <h3 className="font-bold text-gray-900 text-sm">AI Chat</h3>
                     <p className="text-[10px] text-gray-400 uppercase tracking-wide">
-                      {isFree ? `${aiUsed}/${aiLimit} gratis` : "Unlimited"}
+                      {isFree ? `${aiUsed}/${aiLimit} free` : "Unlimited"}
                     </p>
                 </div>
             </Link>
@@ -225,9 +268,9 @@ export default function DashboardPage() {
                     <Crown size={20} />
                 </div>
                 <div>
-                    <h3 className="font-bold text-sm">{isFree ? "Upgrade $29" : "Planul tău"}</h3>
+                    <h3 className="font-bold text-sm">{isFree ? "Upgrade $29" : "Your plan"}</h3>
                     <p className="text-[10px] text-gray-400 uppercase tracking-wide">
-                      {isFree ? "Lifetime • Pe viață" : `${plan} • Activ`}
+                      {isFree ? "Lifetime • Forever" : `${plan} • Active`}
                     </p>
                 </div>
             </Link>
@@ -250,10 +293,10 @@ export default function DashboardPage() {
                     {pets.length === 0 ? (
                         <div className="text-center py-8">
                           <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-3 text-xl">🐾</div>
-                          <p className="text-sm font-bold text-gray-900">Niciun animal adăugat încă</p>
-                          <p className="text-xs text-gray-500 mt-1 mb-4">Adaugă primul animal în 20 secunde - e gratis!</p>
+                          <p className="text-sm font-bold text-gray-900">No pets added yet</p>
+                          <p className="text-xs text-gray-500 mt-1 mb-4">Add your first pet in 20 seconds — it's free!</p>
                           <Link to="/pets/add" className="inline-flex bg-green-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-green-700">
-                            <Plus size={14} className="mr-1" /> Adaugă primul animal
+                            <Plus size={14} className="mr-1" /> Add your first pet
                           </Link>
                         </div>
                     ) : (
@@ -264,7 +307,7 @@ export default function DashboardPage() {
                                 </div>
                                 <div className="min-w-0 flex-1">
                                     <h4 className="font-bold text-sm text-gray-800 truncate">{pet.name}</h4>
-                                    <p className="text-[11px] text-gray-500 truncate">{pet.breed || 'Fără rasă'} • {pet.age || '?'} ani</p>
+                                    <p className="text-[11px] text-gray-500 truncate">{pet.breed || 'Mixed breed'} • {pet.age || '?'} yr</p>
                                 </div>
                                 <ArrowRight size={14} className="text-gray-300" />
                             </Link>
@@ -274,9 +317,9 @@ export default function DashboardPage() {
 
                 {isFree && pets.length >= petLimit && (
                   <div className="mt-4 bg-orange-50 border border-orange-200 rounded-xl p-3 text-xs">
-                    <p className="font-bold text-orange-800">Ai atins limita gratuită de {petLimit} animal</p>
-                    <p className="text-orange-600 mt-1">Treci la Starter Lifetime $29 pentru 3 animale, sau Pro $49 pentru nelimitat.</p>
-                    <Link to="/pricing" className="inline-block mt-2 bg-gray-900 text-white px-3 py-1 rounded-full font-bold text-[11px]">Vezi planurile</Link>
+                    <p className="font-bold text-orange-800">You reached the free limit of {petLimit} pet</p>
+                    <p className="text-orange-600 mt-1">Upgrade to Starter Lifetime $29 for 3 pets, or Pro $49 for unlimited.</p>
+                    <Link to="/pricing" className="inline-block mt-2 bg-gray-900 text-white px-3 py-1 rounded-full font-bold text-[11px]">See plans</Link>
                   </div>
                 )}
             </div>
@@ -288,9 +331,9 @@ export default function DashboardPage() {
                       <Clock size={14} className="text-blue-500" /> Activitate
                     </h3>
                     <div className="space-y-2.5 text-xs">
-                      <div className="flex justify-between"><span className="text-gray-500">AI Chats luna asta</span><span className="font-bold">{aiUsed}/{aiLimit}</span></div>
-                      <div className="flex justify-between"><span className="text-gray-500">Scanări</span><span className="font-bold">{scansUsed}/{scanLimit}</span></div>
-                      <div className="flex justify-between"><span className="text-gray-500">Animale</span><span className="font-bold">{pets.length}/{petLimit === 9999 ? '∞' : petLimit}</span></div>
+                      <div className="flex justify-between"><span className="text-gray-500">AI chats this month</span><span className="font-bold">{aiUsed}/{aiLimit}</span></div>
+                      <div className="flex justify-between"><span className="text-gray-500">Scans</span><span className="font-bold">{scansUsed}/{scanLimit}</span></div>
+                      <div className="flex justify-between"><span className="text-gray-500">Pets</span><span className="font-bold">{pets.length}/{petLimit === 9999 ? '∞' : petLimit}</span></div>
                     </div>
                 </div>
 
@@ -298,24 +341,24 @@ export default function DashboardPage() {
                   <div className="bg-gradient-to-br from-green-600 to-emerald-700 p-5 rounded-2xl text-white shadow-lg">
                     <div className="flex items-center gap-2 mb-2">
                       <Crown size={18} className="text-yellow-300" />
-                      <h3 className="font-bold text-sm">Deblochează tot</h3>
+                      <h3 className="font-bold text-sm">Unlock everything</h3>
                     </div>
                     <p className="text-xs text-green-100 mb-3 leading-relaxed">
-                      Pentru doar <strong className="text-white">$29 o singură dată</strong> primești 3 animale, 100 AI/lună, scan nelimitat, fără reclame, pe viață.
+                      For just <strong className="text-white">$29 one time</strong> you get 3 pets, 100 AI questions/month, unlimited scans, no ads, lifetime access.
                     </p>
                     <Link to="/pricing" className="block w-full bg-white text-green-700 text-center font-bold py-2.5 rounded-xl text-xs hover:bg-green-50 transition">
-                      Ia Lifetime $29 🚀
+                      Get Lifetime $29 🚀
                     </Link>
-                    <p className="text-[10px] text-green-200 text-center mt-2">Garanție 30 zile • Plată unică</p>
+                    <p className="text-[10px] text-green-200 text-center mt-2">30-day guarantee • One-time payment</p>
                   </div>
                 ) : (
                   <div className="bg-gray-900 p-5 rounded-2xl text-white">
                     <h3 className="font-bold text-sm flex items-center gap-2 mb-2">
                       <Crown size={16} className="text-orange-400" /> {plan === 'starter' ? 'Starter Lifetime' : 'Pro Lifetime'} Activ
                     </h3>
-                    <p className="text-xs text-gray-400 mb-3">Mulțumim că susții PetAssistant! Ai acces la toate funcțiile premium.</p>
+                    <p className="text-xs text-gray-400 mb-3">Thanks for supporting PetAssistant! You have access to all premium features.</p>
                     <div className="flex items-center gap-2 text-xs">
-                      <span className="bg-white/10 px-2 py-1 rounded-full">✓ Fără reclame</span>
+                      <span className="bg-white/10 px-2 py-1 rounded-full">✓ No ads</span>
                       <span className="bg-white/10 px-2 py-1 rounded-full">✓ {aiLimit === 9999 ? 'Nelimitat' : `${aiLimit} AI`}</span>
                     </div>
                   </div>

@@ -16,14 +16,16 @@ export default function Refund() {
             </h1>
             <div className="prose prose-green max-w-none text-gray-600 space-y-6">
                 <p className="font-medium bg-yellow-50 p-4 rounded-xl border border-yellow-200 text-yellow-800">
-                    <strong>Summary:</strong> You have 14 days FREE. If you do not cancel before the trial ends, you will be charged. We do not offer refunds for forgotten cancellations.
+                    <strong>Summary:</strong> The Free plan is free forever — no card, nothing to cancel. Paid plans (Starter $29, Pro $49) are one-time lifetime payments covered by a 30-day money-back guarantee.
                 </p>
-                <h3 className="text-lg font-bold text-gray-900">1. Free Trial</h3>
-                <p>Your membership starts with a 14-day free trial. You must provide a payment method, but you will not be charged until day 15.</p>
-                <h3 className="text-lg font-bold text-gray-900">2. Cancellation</h3>
-                <p>You can cancel anytime in your Settings. If you cancel during the trial, you pay $0.</p>
-                <h3 className="text-lg font-bold text-gray-900">3. No Refunds</h3>
-                <p>Once the trial ends and the charge is processed, it is non-refundable for that month.</p>
+                <h3 className="text-lg font-bold text-gray-900">1. Free Plan</h3>
+                <p>The Free plan is free forever. No payment method is required, nothing is charged, and the plan never expires. You get 1 pet, 5 AI questions per month and 3 smart scans per month.</p>
+                <h3 className="text-lg font-bold text-gray-900">2. Lifetime Plans (Starter $29 / Pro $49)</h3>
+                <p>Lifetime plans are a single one-time payment. There is no recurring charge and nothing to cancel — you pay once and keep access. If you choose an optional monthly subscription instead ($4.99 or $9.99), you can cancel anytime from your Settings and you will not be charged again.</p>
+                <h3 className="text-lg font-bold text-gray-900">3. 30-Day Money-Back Guarantee</h3>
+                <p>If you are not satisfied with a paid plan, contact us within 30 days of purchase and we will issue a full refund — no questions asked. Refunds are issued to the original payment method and may take 5–10 business days to appear.</p>
+                <h3 className="text-lg font-bold text-gray-900">4. Questions</h3>
+                <p>Reach us through the Contact page and we will get back to you.</p>
             </div>
         </div>
       </div>
