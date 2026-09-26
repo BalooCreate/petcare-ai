@@ -345,6 +345,20 @@ export async function callAi(provider, { model, messages, maxTokens, jsonMode = 
     const text = d?.choices?.[0]?.message?.content;
     if (typeof text !== "string" || text.trim().length === 0) return false;
 
+    // ✅ FIX: routerul OpenRouter poate trimite cererea către un model de
+    // "content safety", care răspunde "User Safety: safe" în loc de sfat.
+    if (/^\s*(user\s+)?safety\s*[:\-]\s*(safe|unsafe)/i.test(text)) {
+      attempts.push({ model: "—", status: 200, ok: false, error: "safety-classifier reply (skipped)" });
+      return false;
+    }
+
+    // ✅ FIX: la scan (jsonMode) cerem JSON. Un răspuns fără JSON înseamnă că
+    // modelul nu a făcut ce trebuie → trecem la următorul, nu arătăm gunoi.
+    if (jsonMode && !/\{[\s\S]*\}/.test(text)) {
+      attempts.push({ model: "—", status: 200, ok: false, error: "no JSON in reply (skipped)" });
+      return false;
+    }
+
     const cleaned = extractAnswer(text);
     if (cleaned === null) {
       attempts.push({ model: "—", status: 200, ok: false, error: "reasoning-only reply (skipped)" });
