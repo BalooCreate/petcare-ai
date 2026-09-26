@@ -142,7 +142,7 @@ export default function AddPetPage() {
           
           <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-5 mb-4 text-left">
             <h3 className="font-bold text-green-800 mb-2 flex items-center gap-2">
-              <Gift size={16} /> Starter Lifetime - $29
+              <Gift size={16} /> Starter Lifetime - €29
             </h3>
             <ul className="text-xs text-gray-700 space-y-1.5 mb-4">
               <li className="flex gap-2"><Check size={14} className="text-green-600" /> 3 pets instead of 1</li>
@@ -150,7 +150,7 @@ export default function AddPetPage() {
               <li className="flex gap-2"><Check size={14} className="text-green-600" /> No ads, lifetime access</li>
             </ul>
             <Link to="/pricing" className="block w-full bg-green-600 text-white text-center font-bold py-3 rounded-xl hover:bg-green-700">
-              See plans — from $29 🚀
+              See plans — from €29 🚀
             </Link>
           </div>
           
@@ -300,7 +300,7 @@ export default function AddPetPage() {
                           </button>
                         </div>
 
-                        <p className="text-[11px] text-center text-gray-400">You can add more pets later — 1 free, 3 with Starter $29, unlimited with Pro $49</p>
+                        <p className="text-[11px] text-center text-gray-400">You can add more pets later — 1 free, 3 with Starter €29, unlimited with Pro €49</p>
                     </div>
                 </div>
             </Form>

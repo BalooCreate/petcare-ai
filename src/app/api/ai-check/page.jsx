@@ -21,6 +21,8 @@ import {
   getAiProvider,
   resolveModel,
   aiHeaders,
+  callAi,
+  fallbackModels,
   describeAiError,
   isConfigError,
   isUnreachableBaseUrl,
@@ -55,6 +57,7 @@ export async function loader({ request }) {
     step1_environment: {},
     step2_provider: {},
     step3_live_request: {},
+    step4_exact_payloads: {},
     verdict: "",
   };
 
@@ -127,7 +130,78 @@ export async function loader({ request }) {
       reply: (data?.choices?.[0]?.message?.content || "").trim().slice(0, 80),
       tokens: data?.usage?.total_tokens ?? null,
     };
-    out.verdict = "✅ AI-UL FUNCȚIONEAZĂ. Dacă pe site tot apare eroare, reîncarcă pagina cu Ctrl+F5.";
+
+    // ── 4. EXACT payload-urile folosite de chat și scan ─────────
+    // Pasul 3 e doar o scânteie (text simplu, fără instrucțiuni). Chat-ul real
+    // trimite un mesaj "system" + conținut tip listă, iar scan-ul trimite o
+    // imagine + cerere de JSON. Modelele gratuite refuză adesea exact aceste
+    // lucruri — de aceea pasul 4 e cel care arată cauza reală.
+    const CHAT_SYSTEM =
+      "You are PetAssistant, an expert AI Veterinarian. Give concise, helpful advice. Max 200 words.";
+
+    const tinyPng =
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DWAAAB/AF/2hH3GQAAAABJRU5ErkJggg==";
+
+    async function probe(name, messages, jsonMode) {
+      try {
+        const r = await callAi(provider, {
+          model: modelUsed,
+          messages,
+          maxTokens: jsonMode ? 120 : 60,
+          jsonMode,
+        });
+        const text = r.data?.choices?.[0]?.message?.content || "";
+        return {
+          name,
+          ok: r.ok,
+          answeredBy: r.model,
+          attempts: r.attempts,
+          sample: r.ok ? text.trim().slice(0, 160) : null,
+        };
+      } catch (err) {
+        return { name, ok: false, threw: String(err?.message || err), attempts: [] };
+      }
+    }
+
+    out.step4_exact_payloads = {
+      fallbackChain: fallbackModels(),
+      chat_payload: await probe(
+        "chat (system + content as list)",
+        [
+          { role: "system", content: CHAT_SYSTEM },
+          { role: "user", content: [{ type: "text", text: "My dog seems tired. What should I check?" }] },
+        ],
+        false
+      ),
+      scan_payload: await probe(
+        "scan (system + image + JSON mode)",
+        [
+          { role: "system", content: CHAT_SYSTEM },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Reply with JSON: {\"status\":\"safe\",\"title\":\"t\",\"description\":\"d\",\"recommendation\":\"r\"}" },
+              { type: "image_url", image_url: { url: tinyPng } },
+            ],
+          },
+        ],
+        true
+      ),
+    };
+
+    const chatProbe = out.step4_exact_payloads.chat_payload;
+    const scanProbe = out.step4_exact_payloads.scan_payload;
+
+    if (chatProbe.ok && scanProbe.ok) {
+      const firstChoice = chatProbe.answeredBy === modelUsed && scanProbe.answeredBy === modelUsed;
+      out.verdict = firstChoice
+        ? "✅ TOTUL FUNCȚIONEAZĂ — chat și scan, direct pe modelul principal."
+        : `✅ TOTUL FUNCȚIONEAZĂ. Modelul principal e refuzat pe unele cereri, dar lanțul de rezervă preia: chat → ${chatProbe.answeredBy}, scan → ${scanProbe.answeredBy}. Site-ul merge.`;
+    } else if (chatProbe.ok || scanProbe.ok) {
+      out.verdict = "🟡 FUNCȚIONEAZĂ PARȚIAL — vezi step4: unul dintre payload-uri e refuzat.";
+    } else {
+      out.verdict = "🔴 CHAT ȘI SCAN EȘUEAZĂ cu payload-ul real. Cauza exactă e în step4.attempts.";
+    }
     return json(out, 200);
   } catch (err) {
     out.step3_live_request = {

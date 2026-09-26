@@ -3,7 +3,7 @@ import { Form, useNavigation, useActionData, Link, useLoaderData } from "react-r
 import { ArrowLeft, Send, Bot, User, Loader2, Paperclip, Crown, Zap, AlertCircle } from "lucide-react";
 import { ACTIONS, getLimit as getLimitFromPlans } from "../../lib/plans.js";
 import { checkLimit, consumeUsage, getUsage, getUserPlan, getUserIdFromRequest } from "../../lib/usage.js";
-import { getAiProvider, resolveModel, aiHeaders, describeAiError, isConfigError, isUnreachableBaseUrl, AI_UNAVAILABLE_MESSAGE } from "../../lib/ai.js";
+import { getAiProvider, resolveModel, callAi, isConfigError, isUnreachableBaseUrl, AI_UNAVAILABLE_MESSAGE } from "../../lib/ai.js";
 
 // --- LOADER: read plan and usage ---
 export async function loader({ request }) {
@@ -41,7 +41,7 @@ export async function action({ request }) {
   if (!provider) {
     console.error(
       "[chat] No AI key configured. Add OPENAI_API_KEY in Render → Environment " +
-      "(an sk-or-... key from openrouter.ai/keys works, even with a $0 balance on :free models)."
+      "(an sk-or-... key from openrouter.ai/keys works, even with a €0 balance on :free models)."
     );
     return { error: AI_UNAVAILABLE_MESSAGE };
   }
@@ -82,35 +82,40 @@ export async function action({ request }) {
   }
 
   try {
-    const response = await fetch(provider.url, {
-      method: "POST",
-      headers: aiHeaders(provider),
-      body: JSON.stringify({
-        model: resolveModel(model, provider),
-        messages: [
-          {
-            role: "system",
-            content: `You are PetAssistant, an expert AI Veterinarian. Give concise, helpful, empathetic advice about pet health, nutrition, behavior. If image provided, analyze visually for symptoms. Always advise seeing real vet for serious issues. Language: always respond in English, unless the user clearly writes in another language (then reply in that language). Keep answers short but useful (max 200 words).`
-          },
-          { role: "user", content: content }
-        ],
-        max_tokens: userPlan === 'free' ? 300 : 500
-      })
+    // callAi() tries harder than a single fetch: it retries with a simplified
+    // payload (free models often reject the "system" role or array content) and
+    // then walks the fallback model chain. Only if EVERYTHING fails do we show
+    // the visitor an error.
+    const result = await callAi(provider, {
+      model: resolveModel(model, provider),
+      messages: [
+        {
+          role: "system",
+          content: `You are PetAssistant, an expert AI Veterinarian. Give concise, helpful, empathetic advice about pet health, nutrition, behavior. If image provided, analyze visually for symptoms. Always advise seeing real vet for serious issues. Language: always respond in English, unless the user clearly writes in another language (then reply in that language). Keep answers short but useful (max 200 words).`
+        },
+        { role: "user", content: content }
+      ],
+      maxTokens: userPlan === 'free' ? 300 : 500,
     });
 
-    const data = await response.json();
-    if (data.error) {
-      // Real reason (key / credit / provider) goes to the server log only.
-      console.error("[chat] AI error:", describeAiError(data, provider));
-      return { error: isConfigError(data) ? AI_UNAVAILABLE_MESSAGE : data.error.message };
+    if (!result.ok) {
+      // Full trace of what was tried goes to the server log (the diagnostic
+      // route /api/ai-check can show it too).
+      console.error("[chat] all AI attempts failed:", JSON.stringify(result.attempts));
+      const raw = result.data?.error?.message || "";
+      return { error: isConfigError(result.data) || !raw ? AI_UNAVAILABLE_MESSAGE : raw };
     }
-    
-    const reply = data.choices[0].message.content;
+
+    const reply = result.data?.choices?.[0]?.message?.content;
+    if (!reply) {
+      console.error("[chat] empty reply:", JSON.stringify(result.data).slice(0, 300));
+      return { error: AI_UNAVAILABLE_MESSAGE };
+    }
 
     // Increment usage after success
     await consumeUsage(userId, ACTIONS.CHAT);
 
-    return { reply, model, usage: { used: aiUsed + 1, limit: aiLimit, plan: userPlan } };
+    return { reply, model: result.model, usage: { used: aiUsed + 1, limit: aiLimit, plan: userPlan } };
 
   } catch (err) {
     // "fetch failed" is almost always a URL the server cannot reach.
@@ -229,7 +234,7 @@ export default function ChatPage() {
         
         {isFree && (
           <Link to="/pricing" className="bg-gray-900 text-white px-3 py-1.5 rounded-full font-bold text-xs flex items-center gap-1 hover:bg-black">
-            <Crown size={12} className="text-orange-400" /> $29
+            <Crown size={12} className="text-orange-400" /> €29
           </Link>
         )}
       </div>
@@ -248,7 +253,7 @@ export default function ChatPage() {
           </div>
           {aiUsed >= 2 && (
             <Link to="/pricing" className="text-[11px] bg-green-600 text-white px-3 py-1 rounded-full font-bold hover:bg-green-700 shrink-0">
-              Upgrade $29
+              Upgrade €29
             </Link>
           )}
         </div>
@@ -279,7 +284,7 @@ export default function ChatPage() {
                     {msg.isLimit && (
                       <div className="mt-3">
                         <Link to="/pricing" className="inline-flex bg-gray-900 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-black">
-                          Unlock for $29 lifetime 🚀
+                          Unlock for €29 lifetime 🚀
                         </Link>
                       </div>
                     )}
@@ -320,13 +325,13 @@ export default function ChatPage() {
             </div>
             <div className="p-6">
               <p className="text-sm text-gray-600 text-center mb-4">
-                {paywallData?.message || `You used all your free questions. Unlock 100/month for just $29 lifetime!`}
+                {paywallData?.message || `You used all your free questions. Unlock 100/month for just €29 lifetime!`}
               </p>
               
               <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Zap size={16} className="text-green-600" />
-                  <span className="font-bold text-sm">Starter Lifetime - $29</span>
+                  <span className="font-bold text-sm">Starter Lifetime - €29</span>
                   <span className="text-[10px] bg-red-500 text-white px-1.5 py-0.5 rounded-full font-bold">-76%</span>
                 </div>
                 <ul className="text-xs text-gray-700 space-y-1 mb-3">
@@ -335,7 +340,7 @@ export default function ChatPage() {
                   <li>✓ Lifetime access, one-time payment</li>
                 </ul>
                 <Link to="/pricing" className="block w-full bg-green-600 text-white text-center font-bold py-3 rounded-xl hover:bg-green-700">
-                  Unlock $29 lifetime 🚀
+                  Unlock €29 lifetime 🚀
                 </Link>
               </div>
 

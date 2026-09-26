@@ -53,8 +53,8 @@ export default function SoftPaywall({ reason, limit, used, upgradeTo, onClose })
             </div>
 
             <div className="flex items-baseline gap-2 mb-3">
-              <span className="text-3xl font-extrabold text-gray-900">$29</span>
-              <span className="text-sm text-gray-500 line-through">$120</span>
+              <span className="text-3xl font-extrabold text-gray-900">€29</span>
+              <span className="text-sm text-gray-500 line-through">€120</span>
               <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">-76%</span>
             </div>
 
@@ -68,7 +68,7 @@ export default function SoftPaywall({ reason, limit, used, upgradeTo, onClose })
               to="/pricing" 
               className="block w-full bg-green-600 hover:bg-green-700 text-white text-center font-bold py-3.5 rounded-xl transition shadow-lg shadow-green-200"
             >
-              Unlock for $29 lifetime 🚀
+              Unlock for €29 lifetime 🚀
             </Link>
             <p className="text-[11px] text-center text-gray-400 mt-2.5">30-day guarantee • Secure Stripe payment</p>
           </div>
@@ -110,7 +110,7 @@ export function LimitBanner({ used, limit, type }) {
       </div>
       {isWarning && (
         <Link to="/pricing" className="bg-gray-900 text-white text-xs font-bold px-3 py-1.5 rounded-full hover:bg-black transition shrink-0">
-          Upgrade $29
+          Upgrade €29
         </Link>
       )}
     </div>

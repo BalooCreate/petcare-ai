@@ -142,7 +142,7 @@ export default function LandingPage() {
             {/* FREE */}
             <div className="bg-white p-7 rounded-[1.8rem] border border-gray-200 shadow-sm">
               <h3 className="font-bold text-gray-400 uppercase text-xs tracking-widest mb-2">Free Forever</h3>
-              <div className="flex items-baseline gap-1 mb-4"><span className="text-4xl font-extrabold">$0</span><span className="text-gray-400 text-sm">/ lifetime</span></div>
+              <div className="flex items-baseline gap-1 mb-4"><span className="text-4xl font-extrabold">€0</span><span className="text-gray-400 text-sm">/ lifetime</span></div>
               <ul className="space-y-2.5 text-sm text-gray-600 mb-6">
                 <li className="flex gap-2"><Check size={16} className="text-green-500 mt-0.5" /> 1 pet</li>
                 <li className="flex gap-2"><Check size={16} className="text-green-500 mt-0.5" /> 5 AI chats / month</li>
@@ -156,7 +156,7 @@ export default function LandingPage() {
             <div className="bg-white p-7 rounded-[1.8rem] border-2 border-green-500 shadow-xl relative scale-[1.02]">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-500 text-white px-4 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider">🔥 Most popular</div>
               <h3 className="font-bold text-green-600 uppercase text-xs tracking-widest mb-2 mt-2">Starter Lifetime</h3>
-              <div className="flex items-baseline gap-2 mb-1"><span className="text-4xl font-extrabold">$29</span><span className="text-sm text-gray-400 line-through">$120</span></div>
+              <div className="flex items-baseline gap-2 mb-1"><span className="text-4xl font-extrabold">€29</span><span className="text-sm text-gray-400 line-through">€120</span></div>
               <p className="text-xs font-bold text-green-600 mb-4">one-time payment, lifetime access • -76%</p>
               <ul className="space-y-2.5 text-sm text-gray-800 font-medium mb-6">
                 <li className="flex gap-2"><div className="bg-green-100 rounded-full p-0.5"><Check size={12} className="text-green-600" /></div> 3 pets</li>
@@ -164,21 +164,21 @@ export default function LandingPage() {
                 <li className="flex gap-2"><div className="bg-green-100 rounded-full p-0.5"><Check size={12} className="text-green-600" /></div> Unlimited scans, no ads</li>
                 <li className="flex gap-2"><div className="bg-green-100 rounded-full p-0.5"><Check size={12} className="text-green-600" /></div> PDF export + GPT-4o</li>
               </ul>
-              <Link to="/signup?plan=starter_lifetime" className="block w-full py-3.5 text-center rounded-xl bg-green-600 text-white font-bold hover:bg-green-700 shadow-lg shadow-green-200 transition">Get Lifetime $29 🚀</Link>
+              <Link to="/signup?plan=starter_lifetime" className="block w-full py-3.5 text-center rounded-xl bg-green-600 text-white font-bold hover:bg-green-700 shadow-lg shadow-green-200 transition">Get Lifetime €29 🚀</Link>
               <p className="text-[11px] text-center text-gray-400 mt-2">30-day guarantee • One-time payment</p>
             </div>
 
             {/* PRO */}
             <div className="bg-gray-900 p-7 rounded-[1.8rem] border border-gray-800 shadow-xl text-white">
               <h3 className="font-bold text-orange-400 uppercase text-xs tracking-widest mb-2">Pro Family</h3>
-              <div className="flex items-baseline gap-2 mb-1"><span className="text-4xl font-extrabold">$49</span><span className="text-sm text-gray-500 line-through">$240</span></div>
+              <div className="flex items-baseline gap-2 mb-1"><span className="text-4xl font-extrabold">€49</span><span className="text-sm text-gray-500 line-through">€240</span></div>
               <p className="text-xs font-bold text-orange-400 mb-4">lifetime access, unlimited pets</p>
               <ul className="space-y-2.5 text-sm text-gray-300 mb-6">
                 <li className="flex gap-2"><Check size={16} className="text-orange-400" /> Everything unlimited</li>
                 <li className="flex gap-2"><Check size={16} className="text-orange-400" /> Family + vet sharing</li>
                 <li className="flex gap-2"><Check size={16} className="text-orange-400" /> Priority AI 24/7</li>
               </ul>
-              <Link to="/signup?plan=pro_lifetime" className="block w-full py-3 text-center rounded-xl bg-white text-gray-900 font-bold hover:bg-gray-100 transition">Get Pro $49</Link>
+              <Link to="/signup?plan=pro_lifetime" className="block w-full py-3 text-center rounded-xl bg-white text-gray-900 font-bold hover:bg-gray-100 transition">Get Pro €49</Link>
             </div>
           </div>
 
@@ -219,9 +219,9 @@ export default function LandingPage() {
           <div className="flex justify-center gap-1 text-yellow-400 mt-3"><Star size={18} fill="currentColor" /><Star size={18} fill="currentColor" /><Star size={18} fill="currentColor" /><Star size={18} fill="currentColor" /><Star size={18} fill="currentColor" /></div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border"><p className="text-gray-700 text-sm italic mb-4">“I started free and after 3 days I got the $29 Lifetime. Best $29 I ever spent on my dog!”</p><p className="font-bold text-sm">Sarah M. • 2 dogs</p></div>
+          <div className="bg-white p-6 rounded-2xl shadow-sm border"><p className="text-gray-700 text-sm italic mb-4">“I started free and after 3 days I got the €29 Lifetime. Best €29 I ever spent on my dog!”</p><p className="font-bold text-sm">Sarah M. • 2 dogs</p></div>
           <div className="bg-white p-6 rounded-2xl shadow-sm border"><p className="text-gray-700 text-sm italic mb-4">“The AI spotted the allergy from a photo. My vet was impressed by the health log.”</p><p className="font-bold text-sm">Mike R. • 1 cat</p></div>
-          <div className="bg-white p-6 rounded-2xl shadow-sm border"><p className="text-gray-700 text-sm italic mb-4">“Free for 1 pet is great. I have 3 cats, so I upgraded to the $29 lifetime plan.”</p><p className="font-bold text-sm">Emma L. • 3 cats</p></div>
+          <div className="bg-white p-6 rounded-2xl shadow-sm border"><p className="text-gray-700 text-sm italic mb-4">“Free for 1 pet is great. I have 3 cats, so I upgraded to the €29 lifetime plan.”</p><p className="font-bold text-sm">Emma L. • 3 cats</p></div>
         </div>
       </div>
 

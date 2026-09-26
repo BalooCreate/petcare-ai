@@ -82,7 +82,7 @@ export default function CouponsPage() {
                                         <h2 className="text-3xl font-extrabold text-gray-900 mb-3">Unlock Exclusive Rewards</h2>
                     
                     <p className="text-gray-500 max-w-md mb-8 leading-relaxed">
-                        Upgrade to <strong>Starter Lifetime ($29)</strong> or <strong>Pro Lifetime ($49)</strong> — one-time payment — to unlock exclusive coupon codes for Chewy, Petco, and Amazon.
+                        Upgrade to <strong>Starter Lifetime (€29)</strong> or <strong>Pro Lifetime (€49)</strong> — one-time payment — to unlock exclusive coupon codes for Chewy, Petco, and Amazon.
                     </p>
                     <Link to="/pricing" className="bg-gray-900 hover:bg-black text-white font-bold py-4 px-10 rounded-xl shadow-lg transition transform hover:scale-105 flex items-center gap-2">
                         Upgrade Now <Crown size={18} className="text-yellow-400 fill-yellow-400" />

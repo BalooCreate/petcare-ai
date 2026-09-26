@@ -110,8 +110,8 @@ export default function AdminPage() {
                         <input type="hidden" name="intent" value="add_product" />
                         <input name="title" placeholder="Product Name" required className="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-sm focus:border-green-500 outline-none" />
                         <div className="grid grid-cols-2 gap-3">
-                            <input name="price" placeholder="Price ($20)" required className="bg-gray-900 border border-gray-700 rounded-lg p-2 text-sm" />
-                            <input name="old_price" placeholder="Old Price ($30)" className="bg-gray-900 border border-gray-700 rounded-lg p-2 text-sm" />
+                            <input name="price" placeholder="Price (€20)" required className="bg-gray-900 border border-gray-700 rounded-lg p-2 text-sm" />
+                            <input name="old_price" placeholder="Old Price (€30)" className="bg-gray-900 border border-gray-700 rounded-lg p-2 text-sm" />
                         </div>
                         <input name="image_url" placeholder="Image URL (Amazon JPG)" required className="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-sm" />
                         <input name="affiliate_link" placeholder="Affiliate Link" required className="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-sm" />

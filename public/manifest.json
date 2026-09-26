@@ -1,54 +1,82 @@
 {
-  "name": "PetAssistant",
+  "id": "/",
+  "name": "PetAssistant — AI Pet Care",
   "short_name": "PetAssistant",
-  "description": "Your AI-powered pet assistant for care, routines, reminders and health tracking.",
-  "start_url": "/",
+  "description": "AI vet chat, photo health scans, vaccination reminders and health records for your pets. Free to start.",
+  "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
   "orientation": "portrait",
   "theme_color": "#16a34a",
   "background_color": "#16a34a",
-
+  "lang": "en",
+  "dir": "ltr",
+  "categories": [
+    "lifestyle",
+    "health",
+    "productivity"
+  ],
+  "prefer_related_applications": false,
   "icons": [
     {
-      "src": "/icon.png",
-      "sizes": "128x128",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icon.png",
+      "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon.png",
+      "src": "/icon-256.png",
       "sizes": "256x256",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon.png",
+      "src": "/icon-384.png",
       "sizes": "384x384",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon.png",
+      "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
-
   "screenshots": [
     {
       "src": "/splash.png",
       "sizes": "1080x1920",
       "type": "image/png",
-      "form_factor": "wide",
-      "label": "App loading screen"
+      "form_factor": "narrow",
+      "label": "PetAssistant on a phone"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "AI Chat",
+      "short_name": "Chat",
+      "url": "/chat"
+    },
+    {
+      "name": "Smart Scan",
+      "short_name": "Scan",
+      "url": "/scan"
+    },
+    {
+      "name": "My Pets",
+      "short_name": "Pets",
+      "url": "/dashboard"
     }
   ]
 }

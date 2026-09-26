@@ -1,6 +1,8 @@
-import { useLoaderData, Form, useNavigation, Link, redirect } from "react-router";
-import { ArrowLeft, User, Mail, Bell, LogOut, Save, Shield } from "lucide-react";
+import { useState } from "react";
+import { useLoaderData, Form, useNavigation, useActionData, Link, redirect } from "react-router";
+import { ArrowLeft, User, Mail, Bell, LogOut, Save, Shield, Trash2 } from "lucide-react";
 import sql from "../api/utils/sql";
+import { ensureSchema } from "../../lib/usage.js";
 
 // --- BACKEND ---
 export async function loader({ request }) {
@@ -31,6 +33,51 @@ export async function action({ request }) {
     });
   }
 
+  if (intent === "delete_account") {
+    const cookieHeader = request.headers.get("Cookie");
+    const userId = cookieHeader?.match(/user_id=([^;]+)/)?.[1];
+    if (!userId) return redirect("/login");
+
+    // Make sure the schema is up to date first (adds health_logs.owner_id when
+    // this user signed up before that column existed), so nothing survives.
+    try {
+      await ensureSchema();
+    } catch (e) {
+      console.warn("[delete-account] ensureSchema:", e.message);
+    }
+
+    // Delete EVERYTHING that belongs to this user, in dependency order.
+    // Google Play requires in-app account deletion to really delete the data —
+    // so each table is handled explicitly (no SQL built from strings) and each
+    // step is isolated: a missing table must never block the deletion.
+    const steps = [
+      ["usage_limits", sql`DELETE FROM usage_limits WHERE user_id = ${userId}`],
+      ["health_logs", sql`DELETE FROM health_logs WHERE owner_id = ${userId}`],
+      ["schedules", sql`DELETE FROM schedules WHERE owner_id = ${userId}`],
+      ["pets", sql`DELETE FROM pets WHERE owner_id = ${userId}`],
+    ];
+
+    for (const [name, query] of steps) {
+      try {
+        await query;
+      } catch (e) {
+        console.warn(`[delete-account] ${name}: ${e.message}`);
+      }
+    }
+
+    try {
+      await sql`DELETE FROM users WHERE id = ${userId}`;
+    } catch (e) {
+      console.error("[delete-account] users:", e.message);
+      return { error: "Could not delete the account. Please contact support." };
+    }
+
+    console.log(`[delete-account] user ${userId} deleted with all their data`);
+    return redirect("/?deleted=true", {
+      headers: { "Set-Cookie": "user_id=; Path=/; HttpOnly; Max-Age=0" },
+    });
+  }
+
   if (intent === "update_profile") {
     const name = formData.get("name");
     const email = formData.get("email");
@@ -46,6 +93,8 @@ export async function action({ request }) {
 export default function SettingsPage() {
   const { user } = useLoaderData();
   const navigation = useNavigation();
+  const actionData = useActionData();
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const isSaving = navigation.state === "submitting" && navigation.formData?.get("intent") === "update_profile";
 
   return (
@@ -145,6 +194,58 @@ export default function SettingsPage() {
 
             </div>
         </div>
+
+      {/* DANGER ZONE — ștergerea contului (cerință Google Play) */}
+      <div className="mt-6 bg-white rounded-2xl border border-red-100 shadow-sm p-5">
+        <div className="flex items-start gap-3">
+          <div className="bg-red-50 p-2 rounded-full text-red-500 shrink-0">
+            <Trash2 size={18} />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-bold text-gray-900 text-sm">Delete my account</h3>
+            <p className="text-xs text-gray-500 mt-1 mb-3">
+              This permanently deletes your account and <strong>all</strong> your data:
+              pets, health records, schedules, AI chat history and photo scans.
+              This cannot be undone. Your plan is not refunded.
+            </p>
+
+            {confirmDelete ? (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-3">
+                <p className="text-xs font-bold text-red-700 mb-3">
+                  Are you sure? This action is permanent and cannot be reversed.
+                </p>
+                <div className="flex gap-2">
+                  <Form method="post">
+                    <input type="hidden" name="intent" value="delete_account" />
+                    <button className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-4 py-2 rounded-lg">
+                      Yes, delete everything
+                    </button>
+                  </Form>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete(false)}
+                    className="border border-gray-300 text-gray-700 font-bold text-xs px-4 py-2 rounded-lg hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(true)}
+                className="border border-red-200 text-red-600 hover:bg-red-50 font-bold text-xs px-4 py-2 rounded-lg"
+              >
+                Delete my account
+              </button>
+            )}
+
+            {actionData?.error && (
+              <p className="text-xs text-red-600 mt-2">{actionData.error}</p>
+            )}
+          </div>
+        </div>
+      </div>
       </div>
     </div>
   );

@@ -119,7 +119,7 @@ export default function DashboardPage() {
             <div className="flex gap-2">
                 {isFree && (
                   <Link to="/pricing" className="bg-gray-900 text-white px-4 py-1.5 rounded-lg font-bold text-xs shadow-md hover:bg-black flex items-center gap-1.5 transition">
-                      <Crown size={14} className="text-orange-400" /> Upgrade $29
+                      <Crown size={14} className="text-orange-400" /> Upgrade €29
                   </Link>
                 )}
                 <Link to="/settings" className="bg-white text-gray-600 px-3 py-1.5 rounded-lg font-bold text-xs border border-gray-200 shadow-sm hover:bg-gray-50 flex items-center gap-2 transition">
@@ -140,7 +140,7 @@ export default function DashboardPage() {
               <h3 className="font-bold text-sm flex items-center gap-2">
                 <Gift size={16} className="text-green-600" /> Your free plan
               </h3>
-              <Link to="/pricing" className="text-xs font-bold text-green-600 hover:underline">Get Lifetime $29 →</Link>
+              <Link to="/pricing" className="text-xs font-bold text-green-600 hover:underline">Get Lifetime €29 →</Link>
             </div>
             
             <div className="grid grid-cols-3 gap-4">
@@ -177,7 +177,7 @@ export default function DashboardPage() {
               <div className="mt-4 bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl p-3 flex items-center justify-between text-white">
                 <div className="flex items-center gap-2">
                   <Zap size={16} />
-                  <span className="text-xs font-bold">Loving the app? Unlock everything for $29 lifetime!</span>
+                  <span className="text-xs font-bold">Loving the app? Unlock everything for €29 lifetime!</span>
                 </div>
                 <Link to="/pricing" className="bg-white text-green-700 text-xs font-bold px-3 py-1 rounded-full hover:bg-green-50 transition shrink-0">
                   See the offer
@@ -268,7 +268,7 @@ export default function DashboardPage() {
                     <Crown size={20} />
                 </div>
                 <div>
-                    <h3 className="font-bold text-sm">{isFree ? "Upgrade $29" : "Your plan"}</h3>
+                    <h3 className="font-bold text-sm">{isFree ? "Upgrade €29" : "Your plan"}</h3>
                     <p className="text-[10px] text-gray-400 uppercase tracking-wide">
                       {isFree ? "Lifetime • Forever" : `${plan} • Active`}
                     </p>
@@ -318,7 +318,7 @@ export default function DashboardPage() {
                 {isFree && pets.length >= petLimit && (
                   <div className="mt-4 bg-orange-50 border border-orange-200 rounded-xl p-3 text-xs">
                     <p className="font-bold text-orange-800">You reached the free limit of {petLimit} pet</p>
-                    <p className="text-orange-600 mt-1">Upgrade to Starter Lifetime $29 for 3 pets, or Pro $49 for unlimited.</p>
+                    <p className="text-orange-600 mt-1">Upgrade to Starter Lifetime €29 for 3 pets, or Pro €49 for unlimited.</p>
                     <Link to="/pricing" className="inline-block mt-2 bg-gray-900 text-white px-3 py-1 rounded-full font-bold text-[11px]">See plans</Link>
                   </div>
                 )}
@@ -344,10 +344,10 @@ export default function DashboardPage() {
                       <h3 className="font-bold text-sm">Unlock everything</h3>
                     </div>
                     <p className="text-xs text-green-100 mb-3 leading-relaxed">
-                      For just <strong className="text-white">$29 one time</strong> you get 3 pets, 100 AI questions/month, unlimited scans, no ads, lifetime access.
+                      For just <strong className="text-white">€29 one time</strong> you get 3 pets, 100 AI questions/month, unlimited scans, no ads, lifetime access.
                     </p>
                     <Link to="/pricing" className="block w-full bg-white text-green-700 text-center font-bold py-2.5 rounded-xl text-xs hover:bg-green-50 transition">
-                      Get Lifetime $29 🚀
+                      Get Lifetime €29 🚀
                     </Link>
                     <p className="text-[10px] text-green-200 text-center mt-2">30-day guarantee • One-time payment</p>
                   </div>
@@ -359,7 +359,7 @@ export default function DashboardPage() {
                     <p className="text-xs text-gray-400 mb-3">Thanks for supporting PetAssistant! You have access to all premium features.</p>
                     <div className="flex items-center gap-2 text-xs">
                       <span className="bg-white/10 px-2 py-1 rounded-full">✓ No ads</span>
-                      <span className="bg-white/10 px-2 py-1 rounded-full">✓ {aiLimit === 9999 ? 'Nelimitat' : `${aiLimit} AI`}</span>
+                      <span className="bg-white/10 px-2 py-1 rounded-full">✓ {aiLimit === 9999 ? 'Unlimited' : `${aiLimit} AI`}</span>
                     </div>
                   </div>
                 )}

@@ -6,7 +6,7 @@ const PLANS = {
   free: {
     id: "free",
     name: "Free Forever",
-    price: "$0",
+    price: "€0",
     period: "forever",
     description: "Perfect to get started",
     cta: "Start Free — No Card",
@@ -25,13 +25,13 @@ const PLANS = {
   starter: {
     id: "starter_monthly",
     name: "Starter",
-    price: "$4.99",
+    price: "€4.99",
     period: "/month",
-    lifetimePrice: "$29",
+    lifetimePrice: "€29",
     lifetimeText: "one-time payment, lifetime access",
     description: "Most popular",
-    cta: "Get Lifetime $29",
-    ctaSecondary: "$4.99/month",
+    cta: "Get Lifetime €29",
+    ctaSecondary: "€4.99/month",
     link: "/signup?plan=starter_lifetime",
     linkMonthly: "/signup?plan=starter_monthly",
     popular: true,
@@ -50,13 +50,13 @@ const PLANS = {
   pro: {
     id: "pro",
     name: "Pro Family",
-    price: "$9.99",
+    price: "€9.99",
     period: "/month",
-    lifetimePrice: "$49",
+    lifetimePrice: "€49",
     lifetimeText: "lifetime access, unlimited pets",
     description: "For families & breeders",
-    cta: "Get Lifetime $49",
-    ctaSecondary: "$9.99/month",
+    cta: "Get Lifetime €49",
+    ctaSecondary: "€9.99/month",
     link: "/signup?plan=pro_lifetime",
     linkMonthly: "/signup?plan=pro_monthly",
     popular: false,
@@ -114,7 +114,7 @@ export default function Pricing() {
                   <h3 className="text-gray-900 font-bold text-sm uppercase tracking-widest">Free Forever</h3>
                 </div>
                 <div className="flex items-baseline gap-1 mb-1">
-                    <span className="text-5xl font-extrabold text-gray-900">$0</span>
+                    <span className="text-5xl font-extrabold text-gray-900">€0</span>
                     <span className="text-gray-400 text-sm">/ {PLANS.free.period}</span>
                 </div>
                 <p className="text-sm text-gray-500 mb-6">{PLANS.free.description}</p>
@@ -147,7 +147,7 @@ export default function Pricing() {
                 <div className="mb-1">
                   <div className="flex items-baseline gap-2">
                       <span className="text-5xl font-extrabold text-gray-900">{PLANS.starter.lifetimePrice}</span>
-                      <span className="text-gray-500 text-sm line-through">$120</span>
+                      <span className="text-gray-500 text-sm line-through">€120</span>
                   </div>
                   <p className="text-sm font-bold text-green-600">{PLANS.starter.lifetimeText}</p>
                   <p className="text-xs text-gray-400 mt-1">or {PLANS.starter.price}{PLANS.starter.period}</p>
@@ -191,7 +191,7 @@ export default function Pricing() {
                 <div className="mb-1 relative">
                   <div className="flex items-baseline gap-2">
                       <span className="text-5xl font-extrabold text-white">{PLANS.pro.lifetimePrice}</span>
-                      <span className="text-gray-500 text-sm line-through">$240</span>
+                      <span className="text-gray-500 text-sm line-through">€240</span>
                   </div>
                   <p className="text-sm font-bold text-orange-400">{PLANS.pro.lifetimeText}</p>
                   <p className="text-xs text-gray-500 mt-1">or {PLANS.pro.price}{PLANS.pro.period}</p>
@@ -228,7 +228,7 @@ export default function Pricing() {
               </div>
               <div>
                 <p className="font-bold text-gray-800 mb-1">What does Lifetime mean?</p>
-                <p className="text-gray-500">You pay once — $29 or $49 — and get lifetime access. No monthly subscription.</p>
+                <p className="text-gray-500">You pay once — €29 or €49 — and get lifetime access. No monthly subscription.</p>
               </div>
               <div>
                 <p className="font-bold text-gray-800 mb-1">Can I upgrade later?</p>

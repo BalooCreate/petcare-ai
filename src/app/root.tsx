@@ -10,7 +10,6 @@ import {
 import { type ReactNode, useEffect } from "react";
 import "./global.css";
 import { Toaster } from "sonner";
-import EzoicRouteHandler from "@/components/EzoicRouteHandler";
 
 /* -------------------------------------------
    META TAGS COMPLETE PWA (iOS + Android)
@@ -64,7 +63,7 @@ export const meta = () => [
 export const links = () => [
   { rel: "manifest", href: "/manifest.json" },
   { rel: "icon", href: "/icon.png", type: "image/png" },
-  { rel: "apple-touch-icon", href: "/icon.png" },
+  { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
   { rel: "apple-touch-startup-image", href: "/splash.png" },
 ];
 
@@ -73,32 +72,47 @@ export const links = () => [
 -------------------------------------------- */
 function ErrorDisplay({ error }: { error: unknown }) {
   let message = "An unexpected error occurred.";
-  let details = "";
 
   if (isRouteErrorResponse(error)) {
     message = `${error.status} ${error.statusText}`;
-    details = error.data;
   } else if (error instanceof Error) {
     message = error.message;
-    details = error.stack || "";
+  }
+
+  // Guests must never see a stack trace: it looks broken and leaks internals.
+  // The real error still goes to the console for debugging.
+  if (typeof console !== "undefined") {
+    console.error("[error-boundary]", error);
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-      <div className="bg-white p-8 rounded shadow-md max-w-lg w-full">
-        <h1 className="text-2xl font-bold text-red-600 mb-4">Application Error</h1>
-        <p className="text-gray-800 font-medium mb-2">{message}</p>
-        {details && (
-          <pre className="bg-gray-900 text-gray-100 p-4 rounded text-sm overflow-auto max-h-64">
-            {details}
+      <div className="bg-white p-8 rounded-xl shadow-md max-w-md w-full text-center">
+        <div className="text-4xl mb-3">🐾</div>
+        <h1 className="text-xl font-bold text-gray-900 mb-2">Refreshing this page…</h1>
+        <p className="text-gray-600 text-sm mb-5">
+          This was a temporary glitch on our side — your data is safe. The page is
+          reloading by itself in a second.
+        </p>
+        <div className="flex gap-3 justify-center">
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"
+          >
+            Reload now
+          </button>
+          <a
+            href="/"
+            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium"
+          >
+            Homepage
+          </a>
+        </div>
+        {import.meta.env.DEV && (
+          <pre className="bg-gray-900 text-gray-100 p-3 rounded text-xs text-left overflow-auto max-h-48 mt-5">
+            {message}
           </pre>
         )}
-        <button
-          onClick={() => window.location.reload()}
-          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          Reload Page
-        </button>
       </div>
     </div>
   );
@@ -106,8 +120,24 @@ function ErrorDisplay({ error }: { error: unknown }) {
 
 export function ErrorBoundary() {
   const error = useRouteError();
+
+  // Most of these errors are third-party DOM glitches (ad scripts moving nodes
+  // under React). A reload fixes them instantly, so we do it for the visitor —
+  // once every 30 seconds, so a permanent error cannot loop forever.
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof sessionStorage === "undefined") return;
+    const KEY = "pa-auto-reload-at";
+    const last = Number(sessionStorage.getItem(KEY) || 0);
+    if (Date.now() - last < 30000) {
+      const t = setTimeout(() => window.location.reload(), 900);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, []);
+
   return <ErrorDisplay error={error} />;
 }
+
 
 /* -------------------------------------------
    LAYOUT ROOT
@@ -116,25 +146,10 @@ export function Layout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>
-        {/* Ezoic Site Verification */}
-        <meta name="ezoic-site-verification" content="UapyUHTsGJOkqfOGhrThPYEbKXdiGA" />
-
-        {/* Ezoic Privacy Scripts (MUST BE FIRST) */}
-        <script data-cfasync="false" src="https://cmp.gatekeeperconsent.com/min.js"></script>
-        <script data-cfasync="false" src="https://the.gatekeeperconsent.com/cmp.min.js"></script>
-
-        {/* Ezoic Header Script */}
-        <script async src="//www.ezojs.com/ezoic/sa.min.js"></script>
-        <script>
-            window.ezstandalone = window.ezstandalone || {};
-            ezstandalone.cmd = ezstandalone.cmd || [];
-        </script>
-        <script src="//ezoicanalytics.com/analytics.js"></script>
         <Meta />
         <Links />
       </head>
       <body className="font-sans antialiased">
-        <EzoicRouteHandler />
         {children}
         <Toaster position="bottom-right" />
         <ScrollRestoration />

@@ -45,6 +45,10 @@ export async function ensureSchema() {
         await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS lifetime_paid BOOLEAN DEFAULT FALSE`;
         await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()`;
         await sql`ALTER TABLE schedules ADD COLUMN IF NOT EXISTS owner_id TEXT`;
+        // Health logs had no owner at all: every user could see every other user's
+        // records. This column makes them filterable and deletable.
+        await sql`ALTER TABLE health_logs ADD COLUMN IF NOT EXISTS owner_id TEXT`;
+        await sql`CREATE INDEX IF NOT EXISTS health_logs_owner_idx ON health_logs (owner_id)`;
         console.log('✅ usage_limits schema verified/created');
         return true;
       } catch (e) {

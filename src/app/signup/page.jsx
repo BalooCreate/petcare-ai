@@ -142,7 +142,7 @@ export async function action({ request }) {
     if (planType === "lifetime") {
       const priceId = STRIPE_PRICES[`${finalPlan}_lifetime`];
       
-      // Without a lifetime priceId, create a dynamic one-time price of $29/$49
+      // Without a lifetime priceId, create a dynamic one-time price of €29/€49
       const amount = finalPlan === "starter" ? 2900 : 4900; // in cents
       const productName = finalPlan === "starter" ? "PetAssistant Starter - Lifetime" : "PetAssistant Pro Family - Lifetime";
 
@@ -154,7 +154,7 @@ export async function action({ request }) {
           line_items: [
             {
               price_data: {
-                currency: 'usd',
+                currency: 'eur',
                 product_data: {
                   name: productName,
                   description: finalPlan === "starter" 
@@ -187,7 +187,7 @@ export async function action({ request }) {
       // If STRIPE_PRICE_*_MONTHLY is configured we use that price; otherwise the subscription
       // price is built inline so the site works with NO product set up in Stripe.
       const priceId = STRIPE_PRICES[`${finalPlan}_monthly`];
-      const monthlyAmount = finalPlan === "pro" ? 999 : 499; // cents: $9.99 / $4.99
+      const monthlyAmount = finalPlan === "pro" ? 999 : 499; // cents: €9.99 / €4.99
       const monthlyName = finalPlan === "pro"
         ? "PetAssistant Pro Family - Monthly"
         : "PetAssistant Starter - Monthly";
@@ -215,7 +215,7 @@ export async function action({ request }) {
         ...monthlyCommon,
         line_items: [{
           price_data: {
-            currency: 'usd',
+            currency: 'eur',
             unit_amount: monthlyAmount,
             recurring: { interval: 'month' },
             product_data: { name: monthlyName, description: monthlyDescription },
@@ -244,24 +244,24 @@ export default function SignupPage() {
   const isLifetime = plan.includes("lifetime");
 
   let planName = "Free Forever";
-  let planPrice = "$0";
+  let planPrice = "€0";
   let planDetails = "No card, instant activation";
   
   if (isStarter && isLifetime) {
     planName = "Starter Lifetime";
-    planPrice = "$29 lifetime";
+    planPrice = "€29 lifetime";
     planDetails = "One-time payment, lifetime access";
   } else if (isStarter) {
     planName = "Starter Monthly";
-    planPrice = "$4.99/month";
+    planPrice = "€4.99/month";
     planDetails = "Cancel anytime";
   } else if (isPro && isLifetime) {
     planName = "Pro Family Lifetime";
-    planPrice = "$49 lifetime";
+    planPrice = "€49 lifetime";
     planDetails = "Unlimited pets, lifetime access";
   } else if (isPro) {
     planName = "Pro Family Monthly";
-    planPrice = "$9.99/month";
+    planPrice = "€9.99/month";
     planDetails = "Totul nelimitat";
   }
 
@@ -310,7 +310,7 @@ export default function SignupPage() {
             <div className="flex gap-1 text-yellow-400 mb-2">
               <span>⭐</span><span>⭐</span><span>⭐</span><span>⭐</span><span>⭐</span>
             </div>
-            <p className="text-sm text-gray-700 italic">“I started free, and 2 days later I got the $29 Lifetime. Best decision!”</p>
+            <p className="text-sm text-gray-700 italic">“I started free, and 2 days later I got the €29 Lifetime. Best decision!”</p>
             <p className="text-xs font-bold mt-2">— Maria, 2 cats • Starter Lifetime</p>
           </div>
         </div>
@@ -361,7 +361,7 @@ export default function SignupPage() {
                 <div className="bg-green-50 p-3.5 rounded-xl border border-green-100 flex gap-2.5">
                     <Clock className="shrink-0 text-green-600 mt-0.5" size={16} />
                     <div className="text-xs text-green-800 leading-relaxed">
-                      <strong>What happens next?</strong> You go straight to your dashboard and add your first pet. No confirmation email, no card. You can upgrade anytime to $29 lifetime.
+                      <strong>What happens next?</strong> You go straight to your dashboard and add your first pet. No confirmation email, no card. You can upgrade anytime to €29 lifetime.
                     </div>
                 </div>
               ) : (
@@ -395,7 +395,7 @@ export default function SignupPage() {
 
           {isFree && (
             <div className="mt-4 text-center">
-              <Link to="/pricing" className="text-xs text-gray-400 hover:text-gray-600">Want Lifetime $29? See the plans →</Link>
+              <Link to="/pricing" className="text-xs text-gray-400 hover:text-gray-600">Want Lifetime €29? See the plans →</Link>
             </div>
           )}
         </div>

@@ -23,7 +23,7 @@ export const PLANS = {
     name: 'Free Forever',
     shortName: 'Free',
     price: 0,
-    priceLabel: '$0',
+    priceLabel: '€0',
     // Limite lunare
     limits: {
       pets: 1,
@@ -42,7 +42,7 @@ export const PLANS = {
     name: 'Starter Lifetime',
     shortName: 'Starter',
     price: 29,
-    priceLabel: '$29',
+    priceLabel: '€29',
     limits: {
       pets: 3,
       aiChatsPerMonth: 100,
@@ -59,7 +59,7 @@ export const PLANS = {
     name: 'Pro Lifetime',
     shortName: 'Pro',
     price: 49,
-    priceLabel: '$49',
+    priceLabel: '€49',
     limits: {
       pets: 9999,
       aiChatsPerMonth: 9999,
@@ -143,9 +143,9 @@ export function paywallReason(action, used, limit, planId = 'free') {
 
   if (action === ACTIONS.PET) {
     if (planId === 'free') {
-      return `You have ${used} ${actionNoun(action, used !== 1)} on the Free plan. Upgrade to Starter Lifetime ($29) for 3 pets.`;
+      return `You have ${used} ${actionNoun(action, used !== 1)} on the Free plan. Upgrade to Starter Lifetime (€29) for 3 pets.`;
     }
-    return `You reached ${limit} pets. Upgrade to Pro Lifetime ($49) for unlimited pets.`;
+    return `You reached ${limit} pets. Upgrade to Pro Lifetime (€49) for unlimited pets.`;
   }
 
   if (limit >= UNLIMITED_THRESHOLD) {

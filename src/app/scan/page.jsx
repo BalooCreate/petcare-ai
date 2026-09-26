@@ -9,7 +9,7 @@ import { Buffer } from "buffer";
 import { ACTIONS, getLimit } from "../../lib/plans.js";
 import { checkLimit, consumeUsage, getUsage, getUserPlan, getUserIdFromRequest } from "../../lib/usage.js";
 import SoftPaywall from "../../components/SoftPaywall";
-import { getAiProvider, resolveModel, aiHeaders, describeAiError } from "../../lib/ai.js";
+import { getAiProvider, resolveModel, callAi, describeAiError } from "../../lib/ai.js";
 
 // ============================================================
 //  LOADER — plan + remaining scans
@@ -142,7 +142,11 @@ async function analyzeImageWithAI({ imageFile, mode, plan }) {
   const base64 = Buffer.from(arrayBuffer).toString('base64');
   const dataUrl = `data:${imageFile.type || 'image/jpeg'};base64,${base64}`;
 
-  const payload = {
+  // callAi() handles the fallbacks for us: simplified payload when a free model
+  // rejects the "system" role or array content, then the fallback model chain.
+  // jsonMode=true asks for strict JSON first and is dropped automatically when
+  // the model does not support it.
+  const result = await callAi(provider, {
     model: resolveModel(aiModel, provider),
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
@@ -154,38 +158,18 @@ async function analyzeImageWithAI({ imageFile, mode, plan }) {
         ],
       },
     ],
-    max_tokens: aiMaxTokens,
-  };
+    maxTokens: aiMaxTokens,
+    jsonMode: true,
+  });
 
-  const send = async (body) => {
-    const res = await fetch(provider.url, {
-      method: "POST",
-      headers: aiHeaders(provider),
-      body: JSON.stringify(body),
-    });
-    return res.json();
-  };
-
-  // Ask for strict JSON. Not every model supports json_object — free models in
-  // particular often reject it — so if that specific parameter is the problem we
-  // simply retry without it (the system prompt still demands JSON, and
-  // normalizeResult validates the shape afterwards).
-  let data = await send({ ...payload, response_format: { type: "json_object" } });
-
-  if (data.error) {
-    const msg = data.error.message || "";
-    const paramProblem = /response_format|json_object|json_schema|structured|unsupported|not supported/i.test(msg);
-    if (paramProblem) {
-      console.warn("[scan] model rejects response_format, retrying without it");
-      data = await send(payload);
-    }
-  }
-
-  if (data.error) {
+  if (!result.ok) {
     // Log the real cause; the scan route falls back to demo results for the visitor.
-    console.error("[scan] AI error:", describeAiError(data, provider));
+    console.error("[scan] all AI attempts failed:", JSON.stringify(result.attempts));
+    console.error("[scan] last error:", describeAiError(result.data, provider));
     throw new Error('AI unavailable');
   }
+
+  const data = result.data;
 
   const raw = data.choices?.[0]?.message?.content;
   if (!raw) throw new Error('Empty AI response');
@@ -295,7 +279,7 @@ export default function ScanPage() {
   const pwLimit = paywallData?.limit ?? actionData?.limit ?? scansLimit;
   const pwUsed = paywallData?.used ?? actionData?.used ?? scansUsed;
   const pwReason = paywallData?.message ?? actionData?.message
-    ?? `You used ${pwUsed}/${pwLimit} free scans this month. Unlock unlimited scans with Starter Lifetime ($29), one-time payment.`;
+    ?? `You used ${pwUsed}/${pwLimit} free scans this month. Unlock unlimited scans with Starter Lifetime (€29), one-time payment.`;
 
   return (
     <div className="min-h-screen bg-green-50/50 p-6 font-sans text-gray-800 flex justify-center items-start">
@@ -366,7 +350,7 @@ export default function ScanPage() {
                                     to="/pricing"
                                     className="inline-block bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold px-4 py-2.5 rounded-full transition"
                                 >
-                                    Unlock unlimited scans — $29
+                                    Unlock unlimited scans — €29
                                 </Link>
                             </div>
                         </div>

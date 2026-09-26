@@ -52,8 +52,22 @@ export default function Privacy() {
         </div>
 
         <div>
-          <h2 className="text-2xl font-bold mt-8 mb-4">Advertising and Privacy Disclosures</h2>
-          <span id="ezoic-privacy-policy-embed"></span>
+          <h2 className="text-2xl font-bold mt-8 mb-4">Advertising and Cookies</h2>
+          <p>
+            PetAssistant does not show third-party advertisements inside the app
+            (chat, pet scans, dashboard or settings). We do not sell your personal
+            data, your pets' records or the photos you upload.
+          </p>
+          <p className="mt-3">
+            We use essential cookies to keep you signed in and to remember your
+            preferences. We also use privacy-friendly analytics to understand which
+            pages are useful, so we can improve them.
+          </p>
+          <p className="mt-3">
+            If we ever introduce advertising, we will say so on this page and ask
+            for your consent first. You can contact us any time to ask what data we
+            hold about you, or to have it deleted.
+          </p>
         </div>
 
       </div>

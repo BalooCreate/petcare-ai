@@ -134,6 +134,167 @@ export function aiHeaders(provider) {
   return headers;
 }
 
+
+// ============================================================================
+//  ROBUST CHAT COMPLETION — with automatic fallbacks
+// ============================================================================
+//  Free models are picky and flaky, and each one fails differently:
+//
+//    • some reject the "system" role            (Gemma family, older models)
+//    • some reject array-shaped content         (want a plain string)
+//    • some reject response_format/json_object  (no structured output)
+//    • some are throttled upstream              (429, "rate limited")
+//    • some get removed from the catalog        (404 "no endpoints found")
+//
+//  Instead of failing the whole request, we retry with a smaller payload, then
+//  with the next model in the fallback chain. The visitor only sees a failure
+//  if EVERY option fails.
+//
+//  Fallback chain is configurable:  AI_FALLBACK_MODELS=qwen/qwen3.8-27b:free,...
+//
+//  BEST SETTING for a zero-cost site (OpenRouter): AI_MODEL_OVERRIDE=openrouter/free
+//  OpenRouter's own "Free Models Router" picks a healthy free model per request,
+//  filtering by capability (images still work). It avoids the "429 Provider
+//  returned error" flakiness of pinning one single free model.
+// ============================================================================
+
+const PAYLOAD_PROBLEM =
+  /system|role|invalid_prompt|invalid request|malformed|content|response_format|json_object|json_schema|structured|unsupported|not supported|does not support/i;
+
+const RETRYABLE =
+  /rate limit|rate_limit|429|too many|overloaded|capacity|temporarily|upstream|quota|no credits|insufficient/i;
+
+const MODEL_PROBLEM = /no endpoints|not a valid model|not found|404|unavailable|deprecated|removed/i;
+
+/** Models tried in order when the primary one fails. */
+export function fallbackModels() {
+  const raw = process.env.AI_FALLBACK_MODELS;
+  const list = (raw ? raw.split(",") : ["qwen/qwen3.8-27b:free", "nex-agi/nex-n2.5-pro:free"])
+    .map((m) => m.trim())
+    .filter(Boolean);
+  return list;
+}
+
+/**
+ * Smallest payload that still means the same thing:
+ *   • system instructions folded into the first user message
+ *   • array content flattened to a string (only when there is no image)
+ */
+function sanitizeMessages(messages) {
+  const out = [];
+  let systemText = "";
+
+  for (const m of messages) {
+    if (m.role === "system") {
+      const t = typeof m.content === "string" ? m.content : "";
+      systemText = systemText ? `${systemText}\n\n${t}` : t;
+      continue;
+    }
+    let content = m.content;
+    if (Array.isArray(content)) {
+      const hasImage = content.some((p) => p?.type === "image_url");
+      if (!hasImage) content = content.map((p) => p?.text || "").join("\n").trim();
+    }
+    out.push({ role: m.role, content });
+  }
+
+  // No user message yet? Put the instructions in one.
+  if (out.length === 0) {
+    out.push({ role: "user", content: systemText || "Hello" });
+    return out;
+  }
+  if (systemText && out.length > 0) {
+    const first = out[0];
+    if (Array.isArray(first.content)) {
+      // Keep the image parts! Just prepend the instructions as a text part.
+      out[0] = { ...first, content: [{ type: "text", text: systemText }, ...first.content] };
+    } else {
+      const prefix = typeof first.content === "string" ? first.content : "";
+      out[0] = { ...first, content: `${systemText}\n\n${prefix}`.trim() };
+    }
+  }
+  return out;
+}
+
+/**
+ * Calls the provider with automatic payload/model fallbacks.
+ *
+ * @returns {Promise<{ok: boolean, data: any, model: string, attempts: Array}>}
+ */
+export async function callAi(provider, { model, messages, maxTokens, jsonMode = false }) {
+  const attempts = [];
+
+  // A response with no text is a failure too: some free models burn the whole
+  // token budget on invisible "reasoning" and return empty content. Retrying is
+  // better than showing the visitor an empty bubble.
+  const usable = (d) => {
+    if (!d || d.error) return false;
+    const text = d?.choices?.[0]?.message?.content;
+    return typeof text === "string" && text.trim().length > 0;
+  };
+
+  const send = async (useModel, useMessages, useJson) => {
+    const body = { model: useModel, messages: useMessages, max_tokens: maxTokens };
+    if (useJson) body.response_format = { type: "json_object" };
+
+    let status = 0;
+    let data = null;
+    try {
+      const res = await fetch(provider.url, {
+        method: "POST",
+        headers: aiHeaders(provider),
+        body: JSON.stringify(body),
+      });
+      status = res.status;
+      const text = await res.text();
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = { error: { message: `Non-JSON response (HTTP ${status}): ${text.slice(0, 120)}` } };
+      }
+    } catch (err) {
+      data = { error: { message: `Network error: ${err?.cause?.code || err?.message || err}` } };
+    }
+
+    const ok = usable(data);
+    attempts.push({
+      model: useModel,
+      status,
+      ok,
+      error: data?.error?.message || (data?.error ? null : ok ? null : "empty response"),
+    });
+    return data;
+  };
+
+  // ── 1. as-is ────────────────────────────────────────────────
+  let data = await send(model, messages, jsonMode);
+  let usedModel = model;
+  if (usable(data)) return { ok: true, data, model: data?.model || model, attempts };
+
+  // ── 2. same model, simplest possible payload ─────────────────
+  if (data?.error && PAYLOAD_PROBLEM.test(data.error.message || "")) {
+    const simple = sanitizeMessages(messages);
+    const retry = await send(model, simple, false);
+    if (usable(retry)) return { ok: true, data: retry, model: retry?.model || model, attempts };
+    data = retry;
+    var sanitized = simple;
+  }
+
+  // ── 3. next models in the chain ──────────────────────────────
+  const tried = new Set([model]);
+  for (const next of fallbackModels()) {
+    if (tried.has(next)) continue;
+    tried.add(next);
+    const msgs = (typeof sanitized !== "undefined" && sanitized) || sanitizeMessages(messages);
+    const retry = await send(next, msgs, false);
+    if (usable(retry)) return { ok: true, data: retry, model: retry?.model || next, attempts };
+    data = retry;
+    usedModel = next;
+  }
+
+  return { ok: false, data, model: usedModel, attempts };
+}
+
 /**
  * True when the failure is OUR problem (bad key, no credit, provider down) and NOT
  * something the visitor can fix. Those must never be shown verbatim to end users —

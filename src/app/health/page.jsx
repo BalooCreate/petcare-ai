@@ -6,15 +6,27 @@ import {
 import sql from "../api/utils/sql";
 
 // --- BACKEND ---
-export async function loader() {
+function userIdFrom(request) {
+  const cookie = request.headers.get("Cookie");
+  return cookie?.match(/user_id=([^;]+)/)?.[1] || null;
+}
+
+export async function loader({ request }) {
   // Graceful degradation: never 500 the whole page on a database hiccup.
+  const userId = userIdFrom(request);
+
+  // Not signed in → show nothing. Before this check the page listed EVERY user's
+  // health records, which is a privacy leak (and a Google Play data-safety issue).
+  if (!userId) return { logs: [], pets: [], signedIn: false };
+
   try {
-    const logs = await sql`SELECT * FROM health_logs ORDER BY date DESC`;
-    const pets = await sql`SELECT name FROM pets`;
-    return { logs: logs || [], pets: pets || [] };
+    // Only this user's records: owner_id is added by ensureSchema().
+    const logs = await sql`SELECT * FROM health_logs WHERE owner_id = ${userId} ORDER BY date DESC`;
+    const pets = await sql`SELECT name FROM pets WHERE owner_id = ${userId}`;
+    return { logs: logs || [], pets: pets || [], signedIn: true };
   } catch (e) {
     console.error("Health loader error:", e.message);
-    return { logs: [], pets: [] };
+    return { logs: [], pets: [], signedIn: true };
   }
 }
 
@@ -27,10 +39,13 @@ export async function action({ request }) {
   const vet_name = formData.get("vet_name");
   const notes = formData.get("notes");
 
+  const userId = userIdFrom(request);
+  if (!userId) return { error: "Please sign in again." };
+
   try {
     await sql`
-      INSERT INTO health_logs (title, pet_name, date, type, vet_name, notes)
-      VALUES (${title}, ${pet_name}, ${date}, ${type}, ${vet_name}, ${notes})
+      INSERT INTO health_logs (title, pet_name, date, type, vet_name, notes, owner_id)
+      VALUES (${title}, ${pet_name}, ${date}, ${type}, ${vet_name}, ${notes}, ${userId})
     `;
     return { ok: true };
   } catch (e) {
