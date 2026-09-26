@@ -1,4 +1,5 @@
-import { Link } from "react-router";
+import { Link, useLoaderData } from "react-router";
+import { getFoundingStatus } from "../../lib/founding.js";
 import { Check, ArrowLeft, Sparkles, Heart, Zap, Crown, X } from "lucide-react";
 
 // FREEMIUM MODEL - NO CREDIT CARD NEEDED FOR FREE
@@ -73,7 +74,16 @@ const PLANS = {
   }
 };
 
-export default function Pricing() {
+export async function loader() {
+  // Contorul real al ofertei "Membru Fondator" (citit din baza de date)
+  return { founding: await getFoundingStatus() };
+}
+
+// Componenta vizuală o folosesc ȘI pagina de prețuri, ȘI pagina /upgrade.
+// Primește contorul ca proprietate, ca să nu depindă de loader.
+export function PricingPlans({
+  founding = { total: 100, claimed: 0, remaining: 100, open: true, percent: 0 },
+}) {
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50/50 to-white p-6 font-sans text-gray-800 flex justify-center py-12">
       <div className="w-full max-w-6xl">
@@ -104,6 +114,40 @@ export default function Pricing() {
             </div>
             <p className="text-xs text-gray-400 mt-2">Save 80% compared to a monthly subscription</p>
         </div>
+
+        {/* ══ OFERTA MEMBRU FONDATOR (contor real) ══ */}
+        {founding.open ? (
+          <div className="mt-8 max-w-2xl mx-auto bg-white border-2 border-amber-300 rounded-2xl p-5 shadow-sm">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <span className="text-xl">🏆</span>
+              <p className="font-extrabold text-gray-900 text-sm uppercase tracking-wide">
+                Founding Member Offer — first {founding.total} only
+              </p>
+            </div>
+            <p className="text-sm text-gray-600 text-center mb-3">
+              Lock in lifetime access at <strong className="text-gray-900">€29</strong>. When the{" "}
+              {founding.total} spots are gone, lifetime pricing disappears for good — only monthly remains.
+            </p>
+            <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+              <div
+                className="bg-gradient-to-r from-amber-400 to-amber-600 h-2.5 rounded-full transition-all"
+                style={{ width: `${Math.max(3, founding.percent)}%` }}
+              />
+            </div>
+            <p className="text-xs text-center text-gray-500 mt-2 font-semibold">
+              {founding.claimed} of {founding.total} claimed · {founding.remaining} spots left
+            </p>
+          </div>
+        ) : (
+          <div className="mt-8 max-w-2xl mx-auto bg-gray-50 border-2 border-gray-200 rounded-2xl p-5 text-center">
+            <p className="font-extrabold text-gray-700 text-sm uppercase tracking-wide">
+              🔒 Founding Member offer closed
+            </p>
+            <p className="text-sm text-gray-500 mt-1">
+              All {founding.total} lifetime spots were claimed by our first members. Thank you! Monthly plans are still available below.
+            </p>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-start">
             
@@ -249,4 +293,10 @@ export default function Pricing() {
       </div>
     </div>
   );
+}
+
+// Ruta /pricing: ia contorul real din baza de date și îl pasează componentei.
+export default function Pricing() {
+  const { founding } = useLoaderData();
+  return <PricingPlans founding={founding} />;
 }

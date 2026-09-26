@@ -4,6 +4,7 @@ import sql from "../api/utils/sql";
 import Stripe from "stripe";
 import { ensureSchema, isLoginBlocked, recordLoginAttempt, clientIp } from "../../lib/usage.js";
 import { sessionCookieHeader } from "../../lib/session.js";
+import { getFoundingStatus } from "../../lib/founding.js";
 import { hashPassword, verifyPassword, isHashed } from "../../lib/password.js";
 
 // Optional Stripe Price IDs, set as environment variables in Render:
@@ -42,6 +43,18 @@ export async function action({ request }) {
   }
 
   try {
+    // ✅ OFERTA FONDATOR: verificăm că mai există locuri ÎNAINTE de a încasa bani.
+    if (String(planParam).includes("lifetime")) {
+      const founding = await getFoundingStatus();
+      if (!founding.open) {
+        return {
+          error:
+            "All " + founding.total + " Founding Member (lifetime) spots have been claimed. " +
+            "The monthly plan is still available — you can subscribe from the pricing page.",
+        };
+      }
+    }
+
     // Make sure the freemium columns exist before we INSERT into users.
     // (Fixes: `column "plan_type" of relation "users" does not exist`)
     await ensureSchema();

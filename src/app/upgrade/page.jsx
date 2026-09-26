@@ -1,8 +1,14 @@
-import { Link } from "react-router";
+import { Link, useLoaderData } from "react-router";
 import { ArrowLeft } from "lucide-react";
-import PricingPage from "../pricing/page.jsx";
+import { PricingPlans } from "../pricing/page.jsx";
+import { getFoundingStatus } from "../../lib/founding.js";
+
+export async function loader() {
+  return { founding: await getFoundingStatus() };
+}
 
 export default function UpgradePage() {
+  const { founding } = useLoaderData();
   return (
     <div>
       <div className="bg-white border-b border-gray-100 px-6 py-3 flex items-center gap-4 sticky top-0 z-20">
@@ -11,7 +17,7 @@ export default function UpgradePage() {
         </Link>
         <span className="font-bold text-sm">Upgrade — Pick your Lifetime plan</span>
       </div>
-      <PricingPage />
+      <PricingPlans founding={founding} />
     </div>
   );
 }

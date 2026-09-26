@@ -1,5 +1,6 @@
 import { Link, Form } from "react-router";
-import { ArrowLeft, Mail, MapPin, Phone, Send } from "lucide-react";
+import { COMPANY, COMPANY_LINE } from "../../lib/company.js";
+import { ArrowLeft, Mail, MapPin, Send, Building2 } from "lucide-react";
 
 export default function Contact() {
   return (
@@ -30,28 +31,31 @@ export default function Contact() {
                             <div className="bg-white/20 p-3 rounded-xl"><Mail size={20} /></div>
                             <div>
                                 <p className="text-xs text-green-200 font-bold uppercase">Email</p>
-                                <p className="font-medium">support@petassistant.com</p>
+                                <p className="font-medium">{COMPANY.email}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-4">
                             <div className="bg-white/20 p-3 rounded-xl"><MapPin size={20} /></div>
                             <div>
                                 <p className="text-xs text-green-200 font-bold uppercase">Location</p>
-                                <p className="font-medium">New York, USA</p>
+                                <p className="font-medium">{COMPANY.city}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-4">
-                            <div className="bg-white/20 p-3 rounded-xl"><Phone size={20} /></div>
+                            <div className="bg-white/20 p-3 rounded-xl"><Building2 size={20} /></div>
                             <div>
-                                <p className="text-xs text-green-200 font-bold uppercase">Phone</p>
-                                <p className="font-medium">+1 (555) 123-4567</p>
+                                <p className="text-xs text-green-200 font-bold uppercase">Company</p>
+                                <p className="font-medium">{COMPANY.legalName}</p>
+                                <p className="text-xs opacity-80">CUI {COMPANY.cui} · {COMPANY.regCom}</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="mt-12 text-xs text-green-200 opacity-60">
-                    © 2025 PetAssistant. All rights reserved.
+                <div className="mt-8 text-[11px] text-green-200 opacity-70 leading-relaxed">{COMPANY_LINE}</div>
+
+                  <div className="mt-6 text-xs text-green-200 opacity-60">
+                    © {COMPANY.year} PetAssistant · operated by {COMPANY.legalName}
                 </div>
             </div>
 
