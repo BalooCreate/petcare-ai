@@ -1,13 +1,13 @@
 import { useLoaderData, Form, redirect, useNavigation } from "react-router";
 import { Plus, Trash2, ShoppingBag, TicketPercent, Lock, CheckCircle } from "lucide-react";
-import sql from "../api/utils/sql";
+import sql from "../api/utils/sql"
+import { readUserId } from "../../lib/session.js";
 
 // --- BACKEND: Securitate & Date ---
 export async function loader({ request }) {
   // 1. Verify the user
-  const cookieHeader = request.headers.get("Cookie");
-  const userIdMatch = cookieHeader?.match(/user_id=([^;]+)/);
-  const userId = userIdMatch ? userIdMatch[1] : null;
+  // ✅ SECURITY FIX: sesiune semnată (nu mai acceptăm cookie falsificabil)
+  const userId = readUserId(request);
 
   if (!userId) return redirect("/login");
 

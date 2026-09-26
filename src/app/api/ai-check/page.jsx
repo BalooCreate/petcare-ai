@@ -29,7 +29,10 @@ import {
   AI_UNAVAILABLE_MESSAGE,
 } from "../../../lib/ai.js";
 
-const DIAG_TOKEN = "petassists-diag-7f3a";
+// ✅ SECURITY FIX: tokenul nu mai e scris în cod (repository-ul e public).
+// Se citește din Render → Environment → DIAG_TOKEN. Dacă nu e setat, ruta e închisă.
+const DIAG_TOKEN = process.env.DIAG_TOKEN || "";
+const DIAG_DISABLED = !DIAG_TOKEN;
 
 export async function loader({ request }) {
   const url = new URL(request.url);
@@ -41,6 +44,17 @@ export async function loader({ request }) {
         "Cache-Control": "no-store",
       },
     });
+
+  if (DIAG_DISABLED) {
+    return Response.json(
+      {
+        status: "disabled",
+        error: "Diagnostic is disabled: DIAG_TOKEN is not set in the server environment.",
+        hint: "Add DIAG_TOKEN in Render → Environment, then call this URL with ?token=<that value>.",
+      },
+      { status: 404 }
+    );
+  }
 
   if (url.searchParams.get("token") !== DIAG_TOKEN) {
     return json(
@@ -72,7 +86,7 @@ export async function loader({ request }) {
     AI_MODEL_OVERRIDE: process.env.AI_MODEL_OVERRIDE || "not set",
     AI_BASE_URL: process.env.AI_BASE_URL || "not set",
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY
-      ? `set (${process.env.STRIPE_SECRET_KEY.slice(0, 8)}…)`
+      ? "set"
       : "MISSING",
     DATABASE_URL: process.env.DATABASE_URL ? "set" : "MISSING",
   };

@@ -1,13 +1,13 @@
 import { useLoaderData, Form, Link, useNavigate, redirect } from "react-router";
 import { Calendar, Syringe, Stethoscope, Scissors, Plus, ArrowLeft, Clock, CheckCircle, Circle, Bell } from "lucide-react";
-import sql from "../api/utils/sql";
+import sql from "../api/utils/sql"
+import { readUserId } from "../../lib/session.js";
 import { Resend } from 'resend';
 
 // --- BACKEND (NESCHIMBAT) ---
 export async function loader({ request }) {
-  const cookieHeader = request.headers.get("Cookie");
-  const userIdMatch = cookieHeader?.match(/user_id=([^;]+)/);
-  const userId = userIdMatch ? userIdMatch[1] : null;
+  // ✅ SECURITY FIX: sesiune semnată (nu mai acceptăm cookie falsificabil)
+  const userId = readUserId(request);
 
   if (!userId) return redirect("/login");
 
@@ -31,9 +31,8 @@ export async function action({ request }) {
   const type = formData.get("type");
   const notes = formData.get("notes");
 
-  const cookieHeader = request.headers.get("Cookie");
-  const userIdMatch = cookieHeader?.match(/user_id=([^;]+)/);
-  const userId = userIdMatch ? userIdMatch[1] : null;
+  // ✅ SECURITY FIX: sesiune semnată (nu mai acceptăm cookie falsificabil)
+  const userId = readUserId(request);
   if (!userId) return redirect("/login");
 
   await sql`

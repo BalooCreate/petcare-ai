@@ -11,6 +11,7 @@
 // ============================================================
 
 import sql from '../app/api/utils/sql.js';
+import { readUserId } from './session.js';
 import { ACTIONS, ACTION_LIMIT_KEY, getLimit, getPlan, paywallReason, UNLIMITED_THRESHOLD } from './plans.js';
 
 // ------------------------------------------------------------
@@ -50,7 +51,23 @@ export async function ensureSchema() {
         await sql`ALTER TABLE health_logs ADD COLUMN IF NOT EXISTS owner_id TEXT`;
         await sql`CREATE INDEX IF NOT EXISTS health_logs_owner_idx ON health_logs (owner_id)`;
         console.log('✅ usage_limits schema verified/created');
-        return true;
+            // ✅ SECURITY: tabel pentru limitarea încercărilor de login
+    try {
+      await sql`
+        CREATE TABLE IF NOT EXISTS login_attempts (
+          id SERIAL PRIMARY KEY,
+          email TEXT,
+          ip TEXT,
+          success BOOLEAN DEFAULT false,
+          attempted_at TIMESTAMPTZ DEFAULT NOW()
+        )
+      `;
+      await sql`CREATE INDEX IF NOT EXISTS idx_login_attempts_time ON login_attempts (attempted_at)`;
+    } catch (e) {
+      console.log('login_attempts table setup skipped:', e.message);
+    }
+
+return true;
       } catch (e) {
         // Do not block the app if the DB user lacks DDL rights.
         console.error('⚠️  ensureSchema failed (run SQL_MIGRATION_FREEMIUM.sql manually):', e.message);
@@ -65,10 +82,56 @@ export async function ensureSchema() {
 // 2. CORE UTILITIES
 // ------------------------------------------------------------
 
+// ✅ SECURITY FIX (era: cookie nesemnat, se putea falsifica)
+// Acum citește doar cookie-ul de sesiune semnat HMAC. Vezi src/lib/session.js
 export function getUserIdFromRequest(request) {
-  const cookieHeader = request.headers.get('Cookie');
-  const match = cookieHeader?.match(/user_id=([^;]+)/);
-  return match ? match[1] : null;
+  return readUserId(request);
+}
+
+// ────────────────────────────────────────────────────────────
+//  LIMITARE ÎNCERCĂRI DE LOGIN (anti brute-force)
+//  Max 8 greșeli / email sau IP în 15 minute.
+// ────────────────────────────────────────────────────────────
+const LOGIN_MAX_FAILS = 8;
+const LOGIN_WINDOW_MIN = 15;
+
+export function clientIp(request) {
+  const h = request?.headers;
+  const fwd = h?.get?.('x-forwarded-for') || h?.get?.('X-Forwarded-For');
+  if (fwd) return String(fwd).split(',')[0].trim();
+  return 'unknown';
+}
+
+export async function isLoginBlocked(email, ip) {
+  try {
+    await ensureSchema();
+    const rows = await sql`
+      SELECT COUNT(*)::int AS fails FROM login_attempts
+      WHERE success = false
+        AND attempted_at > NOW() - INTERVAL '15 minutes'
+        AND (email = ${email} OR ip = ${ip})
+    `;
+    return (rows[0]?.fails || 0) >= LOGIN_MAX_FAILS;
+  } catch (e) {
+    console.error('isLoginBlocked error:', e.message);
+    return false;
+  }
+}
+
+export async function recordLoginAttempt(email, ip, success) {
+  try {
+    await ensureSchema();
+    await sql`INSERT INTO login_attempts (email, ip, success) VALUES (${email}, ${ip}, ${success})`;
+    if (success) {
+      // curăță istoricul de eșecuri după o autentificare reușită
+      await sql`DELETE FROM login_attempts WHERE success = false AND email = ${email}`;
+    } else {
+      // păstrăm tabelul mic
+      await sql`DELETE FROM login_attempts WHERE attempted_at < NOW() - INTERVAL '2 days'`;
+    }
+  } catch (e) {
+    console.error('recordLoginAttempt error:', e.message);
+  }
 }
 
 /** Planul userului: 'free' | 'starter' | 'pro' */

@@ -1,7 +1,8 @@
 import { useLoaderData, Link } from "react-router";
 import { ArrowLeft, Lock, Copy, ExternalLink, Crown, CheckCircle, TicketPercent } from "lucide-react";
 import { useState } from "react";
-import sql from "../api/utils/sql";
+import sql from "../api/utils/sql"
+import { readUserId } from "../../lib/session.js";
 
 // VIP rewards are a perk for paying members.
 // NOTE: users.plan stores "free" | "starter" | "pro" — never a Stripe price id.
@@ -16,9 +17,8 @@ const PLACEHOLDER_COUPONS = [
 ];
 
 export async function loader({ request }) {
-  const cookieHeader = request.headers.get("Cookie");
-  const userIdMatch = cookieHeader?.match(/user_id=([^;]+)/);
-  const userId = userIdMatch ? userIdMatch[1] : null;
+  // ✅ SECURITY FIX: sesiune semnată (nu mai acceptăm cookie falsificabil)
+  const userId = readUserId(request);
 
   if (!userId) return { isVip: false, coupons: PLACEHOLDER_COUPONS };
 

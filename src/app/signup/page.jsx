@@ -2,7 +2,9 @@ import { Form, redirect, useActionData, Link, useSearchParams } from "react-rout
 import { PawPrint, User, Mail, Lock, ArrowRight, Gift, Zap, Shield, Clock } from "lucide-react";
 import sql from "../api/utils/sql";
 import Stripe from "stripe";
-import { ensureSchema } from "../../lib/usage.js";
+import { ensureSchema, isLoginBlocked, recordLoginAttempt, clientIp } from "../../lib/usage.js";
+import { sessionCookieHeader } from "../../lib/session.js";
+import { hashPassword, verifyPassword, isHashed } from "../../lib/password.js";
 
 // Optional Stripe Price IDs, set as environment variables in Render:
 //   STRIPE_PRICE_STARTER_MONTHLY, STRIPE_PRICE_PRO_MONTHLY,
@@ -24,7 +26,7 @@ const STRIPE_PRICES = {
 export async function action({ request }) {
   const formData = await request.formData();
   const name = formData.get("name");
-  const email = formData.get("email");
+  const email = String(formData.get("email") || "").trim().toLowerCase();
   const password = formData.get("password");
 
   const url = new URL(request.url);
@@ -44,6 +46,13 @@ export async function action({ request }) {
     // (Fixes: `column "plan_type" of relation "users" does not exist`)
     await ensureSchema();
 
+    // ✅ SECURITY FIX (brute-force): calea de "upgrade" verifică parola,
+    // deci o limităm la fel ca login-ul.
+    const ip = clientIp(request);
+    if (await isLoginBlocked(email, ip)) {
+      return { error: "Too many failed attempts. Please wait 15 minutes and try again." };
+    }
+
     // Check if the account already exists
     const existingUser = await sql`SELECT id, password FROM users WHERE email = ${email}`;
     let userId = null;
@@ -55,11 +64,23 @@ export async function action({ request }) {
       if (!isPaidRequest) {
         return { error: "Email already registered! Try logging in instead." };
       }
-      if (String(existingUser[0].password) !== String(password)) {
+      // ✅ SECURITY FIX: verificăm parola prin hash (înainte: comparație directă de text)
+      if (!verifyPassword(password, existingUser[0].password)) {
+        await recordLoginAttempt(email, ip, false);
         return { error: "An account with this email already exists. The password does not match." };
       }
+      await recordLoginAttempt(email, ip, true);
       userId = existingUser[0].id;
       isExistingUser = true;
+
+      // ✅ migrare: parola veche (text simplu) → hash scrypt
+      if (!isHashed(existingUser[0].password)) {
+        try {
+          await sql`UPDATE users SET password = ${hashPassword(password)} WHERE id = ${userId}`;
+        } catch (e) {
+          console.error("[security] migrare parolă eșuată:", e.message);
+        }
+      }
     }
 
     // Determine the final plan
@@ -78,7 +99,7 @@ export async function action({ request }) {
     if (finalPlan === "free" || planParam === "free") {
       const newUser = await sql`
         INSERT INTO users (name, email, password, plan, plan_type, lifetime_paid)
-        VALUES (${name}, ${email}, ${password}, 'free', 'free', false)
+        VALUES (${name}, ${email}, ${hashPassword(password)}, 'free', 'free', false)
         RETURNING id
       `;
       const userId = newUser[0].id;
@@ -96,7 +117,7 @@ export async function action({ request }) {
       // Auto-login + redirect to onboarding (add a pet)
       return redirect("/pets/add?welcome=true", {
         headers: {
-          "Set-Cookie": `user_id=${userId}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`, // 30 zile
+          "Set-Cookie": sessionCookieHeader(userId),
         },
       });
     }
@@ -107,7 +128,7 @@ export async function action({ request }) {
     if (!isExistingUser) {
       const newUser = await sql`
         INSERT INTO users (name, email, password, plan, plan_type, lifetime_paid)
-        VALUES (${name}, ${email}, ${password}, 'free', 'pending', false)
+        VALUES (${name}, ${email}, ${hashPassword(password)}, 'free', 'pending', false)
         RETURNING id
       `;
       userId = newUser[0].id;
@@ -128,7 +149,7 @@ export async function action({ request }) {
       console.warn("STRIPE_SECRET_KEY missing, fallback to free");
       return redirect("/dashboard", {
         headers: {
-          "Set-Cookie": `user_id=${userId}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`,
+          "Set-Cookie": sessionCookieHeader(userId),
         },
       });
     }

@@ -8,13 +8,13 @@ import {
 } from "lucide-react";
 import sql from "../api/utils/sql"; 
 import InstallBanner from "../../components/InstallBanner";
+import { readUserId, sessionCookieHeader } from "../../lib/session.js";
 
 // --- BACKEND ---
 export async function loader({ request }) {
   const url = new URL(request.url);
-  const cookieHeader = request.headers.get("Cookie");
-  const userIdMatch = cookieHeader?.match(/user_id=([^;]+)/);
-  let userId = userIdMatch ? userIdMatch[1] : null;
+  // ✅ SECURITY FIX: sesiune semnată HMAC (nu mai acceptăm cookie falsificabil)
+  let userId = readUserId(request);
 
   // === STRIPE PAYMENT VERIFICATION (on return from checkout) ===
   // Stripe sends us back with ?session_id=cs_xxx. We verify payment BEFORE
@@ -46,7 +46,7 @@ export async function loader({ request }) {
         // Log the user in (cookie) and clean up the URL
         return redirect(`/dashboard?upgraded=${metaPlan}`, {
           headers: {
-            "Set-Cookie": `user_id=${metaUserId}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`,
+            "Set-Cookie": sessionCookieHeader(metaUserId),
           },
         });
       }

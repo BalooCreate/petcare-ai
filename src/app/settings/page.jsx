@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { useLoaderData, Form, useNavigation, useActionData, Link, redirect } from "react-router";
 import { ArrowLeft, User, Mail, Bell, LogOut, Save, Shield, Trash2 } from "lucide-react";
-import sql from "../api/utils/sql";
+import sql from "../api/utils/sql"
+import { readUserId } from "../../lib/session.js";
 import { ensureSchema } from "../../lib/usage.js";
 
 // --- BACKEND ---
 export async function loader({ request }) {
-  const cookieHeader = request.headers.get("Cookie");
-  const userIdMatch = cookieHeader?.match(/user_id=([^;]+)/);
-  const userId = userIdMatch ? userIdMatch[1] : null;
+  // ✅ SECURITY FIX: sesiune semnată (nu mai acceptăm cookie falsificabil)
+  const userId = readUserId(request);
 
   if (!userId) return redirect("/login");
 
@@ -34,8 +34,7 @@ export async function action({ request }) {
   }
 
   if (intent === "delete_account") {
-    const cookieHeader = request.headers.get("Cookie");
-    const userId = cookieHeader?.match(/user_id=([^;]+)/)?.[1];
+    const userId = readUserId(request);
     if (!userId) return redirect("/login");
 
     // Make sure the schema is up to date first (adds health_logs.owner_id when
@@ -81,8 +80,7 @@ export async function action({ request }) {
   if (intent === "update_profile") {
     const name = formData.get("name");
     const email = formData.get("email");
-    const cookieHeader = request.headers.get("Cookie");
-    const userId = cookieHeader?.match(/user_id=([^;]+)/)[1];
+    const userId = readUserId(request);
 
     await sql`UPDATE users SET name = ${name}, email = ${email} WHERE id = ${userId}`;
     return null;

@@ -1,12 +1,14 @@
 import { Form, redirect, useActionData, Link } from "react-router";
 import { PawPrint, Mail, Lock, LogIn } from "lucide-react";
 import sql from "../api/utils/sql";
-import { ensureSchema } from "../../lib/usage.js";
+import { ensureSchema, isLoginBlocked, recordLoginAttempt, clientIp } from "../../lib/usage.js";
+import { sessionCookieHeader } from "../../lib/session.js";
+import { verifyPassword, isHashed, hashPassword } from "../../lib/password.js";
 
 // --- BACKEND: Login Check (Neschimbat) ---
 export async function action({ request }) {
   const formData = await request.formData();
-  const email = formData.get("email");
+  const email = String(formData.get("email") || "").trim().toLowerCase();
   const password = formData.get("password");
 
   if (!email || !password) return { error: "Please enter email and password!" };
@@ -15,17 +17,39 @@ export async function action({ request }) {
     // Ensure the schema matches what the app expects (safe, idempotent)
     await ensureSchema();
 
-    const users = await sql`SELECT * FROM users WHERE email = ${email} AND password = ${password}`;
-    
-    if (users.length === 0) {
+    const ip = clientIp(request);
+
+    // ✅ SECURITY FIX (brute-force): după 8 încercări greșite / 15 min, blocăm.
+    if (await isLoginBlocked(email, ip)) {
+      return { error: "Too many failed attempts. Please wait 15 minutes and try again." };
+    }
+
+    const users = await sql`SELECT * FROM users WHERE email = ${email}`;
+    const user = users[0];
+
+    // ✅ SECURITY FIX: comparăm cu hash, nu cu parolă în clar.
+    const ok = user ? verifyPassword(password, user.password) : false;
+
+    await recordLoginAttempt(email, ip, ok);
+
+    if (!ok) {
       return { error: "Invalid email or password." };
     }
 
-    const user = users[0];
+    // Migrare transparentă: parola veche (text simplu) devine hash acum.
+    if (!isHashed(user.password)) {
+      try {
+        await sql`UPDATE users SET password = ${hashPassword(password)} WHERE id = ${user.id}`;
+        console.log(`[security] parola userului ${user.id} a fost transformată în hash scrypt`);
+      } catch (e) {
+        console.error("[security] nu am putut transforma parola în hash:", e.message);
+      }
+    }
 
+    // ✅ SECURITY FIX: cookie de sesiune semnat (nu mai poate fi falsificat)
     return redirect("/dashboard", {
       headers: {
-        "Set-Cookie": `user_id=${user.id}; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400`,
+        "Set-Cookie": sessionCookieHeader(user.id),
       },
     });
 

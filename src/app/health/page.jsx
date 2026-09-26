@@ -3,12 +3,13 @@ import {
   ArrowLeft, Plus, Activity, Syringe, 
   Stethoscope, Pill, FileHeart, Calendar, Save 
 } from "lucide-react";
-import sql from "../api/utils/sql";
+import sql from "../api/utils/sql"
+import { readUserId } from "../../lib/session.js";
 
 // --- BACKEND ---
+// ✅ SECURITY FIX: sesiune semnată
 function userIdFrom(request) {
-  const cookie = request.headers.get("Cookie");
-  return cookie?.match(/user_id=([^;]+)/)?.[1] || null;
+  return readUserId(request);
 }
 
 export async function loader({ request }) {
