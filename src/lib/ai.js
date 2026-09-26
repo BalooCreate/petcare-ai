@@ -296,6 +296,34 @@ function sanitizeMessages(messages) {
 }
 
 /**
+ * Modelele de "reasoning" scriu adesea un monolog înainte de răspuns.
+ *  • text normal            → îl întoarce neatins
+ *  • monolog + răspuns clar → întoarce DOAR răspunsul
+ *  • doar monolog (tăiat)   → întoarce null (→ se încearcă alt model)
+ */
+export function extractAnswer(text) {
+  if (typeof text !== "string") return text;
+  const startsAsReasoning =
+    /^\s*(here'?s (a |the |my )?(thinking|reasoning|thought)|thinking process|thought process|reasoning:|let me think|analysis:)/i;
+  if (!startsAsReasoning.test(text)) return text;
+
+  const marker =
+    /(?:^|\n)\s*\*{0,2}(?:final answer|answer|advice|recommendation|response|sfat|recomandare)\*{0,2}\s*[:\-]\s*\*{0,2}\s*/i;
+  const m = text.match(marker);
+  if (m) {
+    const rest = text.slice(m.index + m[0].length).trim();
+    if (rest.length > 40) return rest;
+  }
+
+  // fără marcaj: dacă ultimul paragraf arată ca un sfat (fără liste de plan), îl folosim
+  const tail = text.split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean).pop() || "";
+  const looksLikePlan = /(analyze|constraint|draft response|key vet advice|user input)/i.test(tail);
+  if (tail.length > 80 && !looksLikePlan) return tail;
+
+  return null;
+}
+
+/**
  * Calls the provider with automatic payload/model fallbacks.
  *
  * @returns {Promise<{ok: boolean, data: any, model: string, attempts: Array}>}
@@ -306,10 +334,24 @@ export async function callAi(provider, { model, messages, maxTokens, jsonMode = 
   // A response with no text is a failure too: some free models burn the whole
   // token budget on invisible "reasoning" and return empty content. Retrying is
   // better than showing the visitor an empty bubble.
+  //
+  // ✅ FIX (26.09): unele modele gratuite își varsă "gândirea" în răspuns
+  // ("Here's a thinking process: 1. Analyze User Input..."), iar clientul
+  // primea o pagină de monolog în loc de sfat. Acum:
+  //   • dacă după monolog există un răspuns clar → îl extragem și îl arătăm
+  //   • dacă e doar monolog → cererea e considerată eșuată și trecem la alt model
   const usable = (d) => {
     if (!d || d.error) return false;
     const text = d?.choices?.[0]?.message?.content;
-    return typeof text === "string" && text.trim().length > 0;
+    if (typeof text !== "string" || text.trim().length === 0) return false;
+
+    const cleaned = extractAnswer(text);
+    if (cleaned === null) {
+      attempts.push({ model: "—", status: 200, ok: false, error: "reasoning-only reply (skipped)" });
+      return false;
+    }
+    if (cleaned !== text) d.choices[0].message.content = cleaned;
+    return true;
   };
 
   const send = async (useModel, useMessages, useJson) => {
