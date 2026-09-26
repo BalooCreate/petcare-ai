@@ -151,6 +151,8 @@ export function aiHeaders(provider) {
 //  if EVERY option fails.
 //
 //  Fallback chain is configurable:  AI_FALLBACK_MODELS=qwen/qwen3.8-27b:free,...
+//  If EVERY model in the chain fails, the catalog is fetched and other free
+//  models are discovered automatically (self-healing when models are removed).
 //
 //  BEST SETTING for a zero-cost site (OpenRouter): AI_MODEL_OVERRIDE=openrouter/free
 //  OpenRouter's own "Free Models Router" picks a healthy free model per request,
@@ -166,13 +168,88 @@ const RETRYABLE =
 
 const MODEL_PROBLEM = /no endpoints|not a valid model|not found|404|unavailable|deprecated|removed/i;
 
-/** Models tried in order when the primary one fails. */
+/**
+ * Models tried in order when the primary one fails.
+ *
+ * Lista verificată direct în catalogul OpenRouter (26.09.2026). Înainte conținea
+ * modele ȘTERSE (`nex-agi/nex-n2.5-pro:free` → 404 "No endpoints found"), iar
+ * chat-ul și scan-ul cădeau complet pe site-ul live.
+ *
+ * Configurabilă din Render: AI_FALLBACK_MODELS=model1,model2,...
+ */
 export function fallbackModels() {
   const raw = process.env.AI_FALLBACK_MODELS;
-  const list = (raw ? raw.split(",") : ["qwen/qwen3.8-27b:free", "nex-agi/nex-n2.5-pro:free"])
+  const list = (
+    raw
+      ? raw.split(",")
+      : [
+          "openrouter/free", // routerul dinamic al OpenRouter (alege singur un model sănătos)
+          "nvidia/nemotron-3-super-120b-a12b:free",
+          "qwen/qwen3.8-27b:free",
+          "thinkingmachines/inkling:free",
+          "nvidia/nemotron-3-ultra-550b-a55b:free",
+          "google/gemma-4-26b-a4b-it:free",
+        ]
+  )
     .map((m) => m.trim())
     .filter(Boolean);
   return list;
+}
+
+// ============================================================================
+//  AUTO-DESCOPERIRE DE MODELE (self-healing)
+//
+//  Modelele gratuite de pe OpenRouter apar și dispar fără anunț: dacă un model
+//  din listă e șters, site-ul rămâne fără AI (exact ce s-a întâmplat azi).
+//  Ca să nu se mai repete, dacă tot lanțul fix eșuează, citim catalogul public
+//  al OpenRouter și încercăm automat alte modele gratuite — cu vedere (imagine)
+//  dacă requestul conține o poză, altfel orice model gratuit de text.
+//
+//  Catalogul se ține minte o oră (un singur fetch, apoi din cache).
+// ============================================================================
+const CATALOG_URL = "https://openrouter.ai/api/v1/models";
+const CATALOG_TTL_MS = 60 * 60 * 1000;
+const BAD_MODEL = /safety|moderation|guard|classifier|embed|rerank|whisper|tts/i;
+
+let _catalog = { at: 0, text: [], vision: [] };
+
+async function loadCatalog() {
+  if (_catalog.at && Date.now() - _catalog.at < CATALOG_TTL_MS) return _catalog;
+  try {
+    const res = await fetch(CATALOG_URL);
+    const json = await res.json();
+    const free = (json?.data || []).filter(
+      (m) => typeof m?.id === "string" && m.id.endsWith(":free") && !BAD_MODEL.test(m.id)
+    );
+    const hasImage = (m) =>
+      Array.isArray(m?.architecture?.input_modalities) &&
+      m.architecture.input_modalities.includes("image");
+    _catalog = {
+      at: Date.now(),
+      vision: free.filter(hasImage).map((m) => m.id),
+      text: free.filter((m) => !hasImage(m)).map((m) => m.id),
+    };
+  } catch (e) {
+    _catalog = { ..._catalog, at: Date.now() };
+  }
+  return _catalog;
+}
+
+/**
+ * Alte modele gratuite din catalogul live, care nu au fost încercate deja.
+ * @param {{needVision?: boolean, exclude?: Set<string>, limit?: number}} opts
+ */
+export async function discoverFreeModels({ needVision = false, exclude = new Set(), limit = 4 } = {}) {
+  const cat = await loadCatalog();
+  const pool = needVision ? cat.vision : [...cat.text, ...cat.vision];
+  return pool.filter((id) => !exclude.has(id)).slice(0, limit);
+}
+
+/** True dacă mesajele conțin o imagine (scan / analiză poză). */
+export function messagesHaveImage(messages) {
+  return messages.some(
+    (m) => Array.isArray(m.content) && m.content.some((part) => part?.type === "image_url")
+  );
 }
 
 /**
@@ -282,12 +359,38 @@ export async function callAi(provider, { model, messages, maxTokens, jsonMode = 
 
   // ── 3. next models in the chain ──────────────────────────────
   const tried = new Set([model]);
+  const simpleMsgs = () =>
+    (typeof sanitized !== "undefined" && sanitized) || sanitizeMessages(messages);
+
   for (const next of fallbackModels()) {
     if (tried.has(next)) continue;
     tried.add(next);
-    const msgs = (typeof sanitized !== "undefined" && sanitized) || sanitizeMessages(messages);
-    const retry = await send(next, msgs, false);
+    const retry = await send(next, simpleMsgs(), false);
     if (usable(retry)) return { ok: true, data: retry, model: retry?.model || next, attempts };
+    data = retry;
+    usedModel = next;
+  }
+
+  // ── 4. auto-descoperire: alte modele gratuite din catalogul live ──
+  // Rulează doar dacă TOT ce era mai sus a eșuat (deci nu încetinește cazul normal).
+  let discovered = [];
+  try {
+    discovered = await discoverFreeModels({
+      needVision: messagesHaveImage(messages),
+      exclude: tried,
+    });
+  } catch (e) {
+    discovered = [];
+  }
+
+  for (const next of discovered) {
+    if (tried.has(next)) continue;
+    tried.add(next);
+    const retry = await send(next, simpleMsgs(), false);
+    if (usable(retry)) {
+      console.log(`[ai] model de rezervă descoperit automat: ${next}`);
+      return { ok: true, data: retry, model: retry?.model || next, attempts };
+    }
     data = retry;
     usedModel = next;
   }
