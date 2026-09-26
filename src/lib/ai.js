@@ -184,11 +184,11 @@ export function fallbackModels() {
       ? raw.split(",")
       : [
           "openrouter/free", // routerul dinamic al OpenRouter (alege singur un model sănătos)
-          "nvidia/nemotron-3-super-120b-a12b:free",
-          "qwen/qwen3.8-27b:free",
-          "thinkingmachines/inkling:free",
-          "nvidia/nemotron-3-ultra-550b-a55b:free",
-          "google/gemma-4-26b-a4b-it:free",
+          "nvidia/nemotron-3-super-120b-a12b:free", // text — verificat că răspunde
+          "qwen/qwen3.8-27b:free", // vede poze
+          "google/gemma-4-26b-a4b-it:free", // vede poze
+          "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", // vede poze
+          "nvidia/nemotron-3-ultra-550b-a55b:free", // text
         ]
   )
     .map((m) => m.trim())
@@ -209,7 +209,9 @@ export function fallbackModels() {
 // ============================================================================
 const CATALOG_URL = "https://openrouter.ai/api/v1/models";
 const CATALOG_TTL_MS = 60 * 60 * 1000;
-const BAD_MODEL = /safety|moderation|guard|classifier|embed|rerank|whisper|tts/i;
+// `inkling` răspunde 403 "only available on agentic harnesses" → inutil aici.
+// `safety/moderation/...` sunt clasificatoare, nu modele de conversație.
+const BAD_MODEL = /safety|moderation|guard|classifier|embed|rerank|whisper|tts|inkling/i;
 
 let _catalog = { at: 0, text: [], vision: [] };
 
@@ -362,7 +364,20 @@ export async function callAi(provider, { model, messages, maxTokens, jsonMode = 
   const simpleMsgs = () =>
     (typeof sanitized !== "undefined" && sanitized) || sanitizeMessages(messages);
 
-  for (const next of fallbackModels()) {
+  // Cererile cu poză (scan) nu au ce căuta la modelele care nu văd imagini:
+  // primeam "No endpoints found that support image input" și pierdeam timp + cotă.
+  const needVision = messagesHaveImage(messages);
+  let chain = fallbackModels();
+  if (needVision) {
+    const cat = await loadCatalog();
+    if (cat.vision.length) {
+      const known = new Set([...cat.vision, ...cat.text]);
+      chain = chain.filter((m) => cat.vision.includes(m) || !known.has(m));
+      if (!chain.length) chain = fallbackModels(); // dacă filtrarea golește lista, nu riscăm
+    }
+  }
+
+  for (const next of chain) {
     if (tried.has(next)) continue;
     tried.add(next);
     const retry = await send(next, simpleMsgs(), false);
@@ -376,7 +391,7 @@ export async function callAi(provider, { model, messages, maxTokens, jsonMode = 
   let discovered = [];
   try {
     discovered = await discoverFreeModels({
-      needVision: messagesHaveImage(messages),
+      needVision,
       exclude: tried,
     });
   } catch (e) {

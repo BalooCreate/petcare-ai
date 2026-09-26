@@ -153,8 +153,11 @@ export async function loader({ request }) {
     const CHAT_SYSTEM =
       "You are PetAssistant, an expert AI Veterinarian. Give concise, helpful advice. Max 200 words.";
 
-    const tinyPng =
-      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DWAAAB/AF/2hH3GQAAAABJRU5ErkJggg==";
+    // ✅ FIX: imaginea de test dinainte era CORUPTĂ — modelele răspundeau
+      // "broken data stream when reading image file", deci pasul 4 părea rupt
+      // chiar când aplicația era ok. Acesta e un PNG valid de 64x64.
+      const tinyPng =
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAa0lEQVR42u3aQQnAQAxE0ciJiBXR86qrnBUREXXQhUooBFp4wzfw7hP3zxcAnwFUZkd5Hh0BAAAAAAAAAAAAAAAAAAAAAAAAAAA8y1kdXWt0BAAAAAAAAAAAAAAAAAAAAAAAAAAA4DsN8H4bQ8TmuWipBkkAAAAASUVORK5CYII=";
 
     async function probe(name, messages, jsonMode) {
       try {
