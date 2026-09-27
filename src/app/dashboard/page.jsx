@@ -98,8 +98,8 @@ export default function DashboardPage() {
       <div className="w-full max-w-5xl">
         
         {/* HEADER */}
-        <div className="flex items-center justify-between mb-6 mt-2">
-            <Link to="/" className="group block cursor-pointer">
+        <div className="flex items-start justify-between gap-3 mb-6 mt-2">
+            <Link to="/" className="group block cursor-pointer min-w-0">
                 <div className="flex items-center gap-2">
                     <div className="bg-green-100 p-2 rounded-lg text-green-600">
                         <PawPrint size={20} />
@@ -110,23 +110,30 @@ export default function DashboardPage() {
                         <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider ${isFree ? 'bg-gray-100 text-gray-600' : isStarter ? 'bg-green-100 text-green-700' : 'bg-gray-900 text-orange-400'}`}>
                           {isFree ? 'Free Forever' : isStarter ? 'Starter Lifetime' : 'Pro Lifetime'}
                         </span>
-                        {user?.name && <span className="text-[11px] text-gray-400">• {user.name}</span>}
+                        {user?.name && <span className="text-[11px] text-gray-400 hidden sm:inline">• {user.name}</span>}
                       </div>
                     </div>
                 </div>
             </Link>
 
-            <div className="flex gap-2">
+            {/* ✅ FIX: pe telefon cele 3 butoane cu text NU încăpeau lângă logo, iar
+                „AI Chat" (ultimul) ieșea din pagină. Acum: pe ecrane mici rămân doar
+                iconițele (textul apare de la „sm" în sus) și rândul poate face wrap,
+                deci nimic nu mai iese din pagină. */}
+            <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2 shrink-0">
                 {isFree && (
-                  <Link to="/pricing" className="bg-gray-900 text-white px-4 py-1.5 rounded-lg font-bold text-xs shadow-md hover:bg-black flex items-center gap-1.5 transition">
-                      <Crown size={14} className="text-orange-400" /> Upgrade €29
+                  <Link to="/pricing" title="Upgrade" aria-label="Upgrade"
+                        className="bg-gray-900 text-white px-2.5 sm:px-4 py-1.5 rounded-lg font-bold text-xs shadow-md hover:bg-black flex items-center gap-1.5 transition">
+                      <Crown size={14} className="text-orange-400 shrink-0" /> <span className="hidden sm:inline">Upgrade €29</span>
                   </Link>
                 )}
-                <Link to="/settings" className="bg-white text-gray-600 px-3 py-1.5 rounded-lg font-bold text-xs border border-gray-200 shadow-sm hover:bg-gray-50 flex items-center gap-2 transition">
-                    <Settings size={14} /> Settings
+                <Link to="/settings" title="Settings" aria-label="Settings"
+                      className="bg-white text-gray-600 px-2.5 sm:px-3 py-1.5 rounded-lg font-bold text-xs border border-gray-200 shadow-sm hover:bg-gray-50 flex items-center gap-2 transition">
+                    <Settings size={14} className="shrink-0" /> <span className="hidden sm:inline">Settings</span>
                 </Link>
-                <Link to="/chat" className="bg-green-600 text-white px-4 py-1.5 rounded-lg font-bold text-xs shadow-md hover:bg-green-700 flex items-center gap-2 transition">
-                    <MessageCircle size={14} /> AI Chat
+                <Link to="/chat" title="AI Chat" aria-label="AI Chat"
+                      className="bg-green-600 text-white px-2.5 sm:px-4 py-1.5 rounded-lg font-bold text-xs shadow-md hover:bg-green-700 flex items-center gap-2 transition">
+                    <MessageCircle size={14} className="shrink-0" /> <span className="hidden sm:inline">AI Chat</span>
                 </Link>
             </div>
         </div>

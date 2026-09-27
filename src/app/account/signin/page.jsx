@@ -1,76 +1,26 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router";
-import { PawPrint, Mail, Lock, Loader2 } from "lucide-react";
-import { useAuth } from "../../../utils/useAuth"; // ✅ Correct relative path
+// ============================================================================
+//  /account/signin — PAGINĂ FALSĂ, ÎNLOCUITĂ CU O REDIRECȚIONARE
+// ============================================================================
+//  Problema veche: pagina ARĂTA ca un login, dar butonul făcea doar
+//  `setTimeout(() => navigate("/dashboard"))` — fără verificarea parolei, fără
+//  cookie de sesiune. Cine ajungea aici (inclusiv din căutări Google) credea că
+//  „s-a logat", iar apoi era dat afară de pe fiecare pagină protejată.
+//
+//  Acum trimite simplu către login-ul real, ca nimeni să nu se mai încurce.
+// ============================================================================
 
-export default function SignIn() {
-  const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
-  const { signIn } = useAuth();
+import { redirect } from "react-router";
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    // Simulate login
-    setTimeout(() => {
-      navigate("/dashboard");
-    }, 1000);
-  };
+export const meta = () => [{ title: "Sign in — PetAssistant" }];
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 max-w-md w-full">
-        <div className="text-center mb-8">
-          <div className="bg-green-100 p-3 rounded-full w-fit mx-auto mb-4">
-            <PawPrint className="w-8 h-8 text-green-600" />
-          </div>
-          <h1 className="text-2xl font-bold text-gray-800">Welcome Back</h1>
-          <p className="text-gray-600 mt-2">Sign in to continue to PetAssistent</p>
-        </div>
+export function loader() {
+  return redirect("/login");
+}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-              <input
-                type="email"
-                required
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all"
-                placeholder="you@example.com"
-              />
-            </div>
-          </div>
+export function action() {
+  return redirect("/login");
+}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-              <input
-                type="password"
-                required
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all"
-                placeholder="••••••••"
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
-          >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Sign In"}
-          </button>
-        </form>
-
-        <p className="text-center mt-6 text-gray-600">
-          Don't have an account?{" "}
-          <Link to="/account/signup" className="text-green-600 hover:text-green-700 font-medium">
-            Sign up
-          </Link>
-        </p>
-      </div>
-    </div>
-  );
+export default function AccountSigninRedirect() {
+  return null;
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Download, Share, X } from "lucide-react";
+import { rememberInstallPrompt, clearInstallPrompt } from "../lib/installPrompt.js";
 
 export default function InstallBanner() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -26,6 +27,7 @@ export default function InstallBanner() {
       console.log("✅ Evenimentul 'beforeinstallprompt' a fost capturat!");
       e.preventDefault(); // Stop the browser's automatic banner
       setDeferredPrompt(e); // Save the event in a variable
+      rememberInstallPrompt(e); // ✅ și în modulul comun (butonul din Setări)
       setIsVisible(true); // NOW we show our own button
     };
 

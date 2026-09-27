@@ -1,4 +1,4 @@
-import { Form, redirect, useActionData, Link } from "react-router";
+import { Form, redirect, useActionData, Link, useSearchParams } from "react-router";
 import { PawPrint, Mail, Lock, LogIn } from "lucide-react";
 import sql from "../api/utils/sql";
 import { ensureSchema, isLoginBlocked, recordLoginAttempt, clientIp } from "../../lib/usage.js";
@@ -62,6 +62,8 @@ export async function action({ request }) {
 // --- FRONTEND: Login Form (Modificat pentru tema Verde) ---
 export default function LoginPage() {
   const actionData = useActionData();
+  const [params] = useSearchParams();
+  const resetDone = params.get("reset") === "1";
 
   return (
     // 1. FUNDAL VERDE PAL (bg-green-50)
@@ -79,6 +81,12 @@ export default function LoginPage() {
       {/* 2. CARD ALB CU CONTUR VERDE SUBTIL */}
       <div className="w-full max-w-md bg-white border border-green-100 shadow-2xl rounded-3xl p-8">
         
+        {resetDone && (
+            <div className="mb-6 bg-green-50 text-green-700 px-4 py-3 rounded-xl text-sm border border-green-100 text-center font-medium">
+              ✅ Your password was changed. Sign in with your new password.
+            </div>
+        )}
+
         {actionData?.error && (
             <div className="mb-6 bg-red-50 text-red-600 px-4 py-3 rounded-xl text-sm border border-red-100 text-center font-medium">
               {actionData.error}
@@ -106,7 +114,7 @@ export default function LoginPage() {
             <div>
                 <div className="flex justify-between items-center mb-1 ml-1">
                     <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">Password</label>
-                    <a href="#" className="text-xs text-green-600 hover:text-green-700 font-semibold hover:underline">Forgot Password?</a>
+                    <Link to="/forgot-password" className="text-xs text-green-600 hover:text-green-700 font-semibold hover:underline">Forgot Password?</Link>
                 </div>
                 <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">

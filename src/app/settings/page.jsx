@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLoaderData, Form, useNavigation, useActionData, Link, redirect } from "react-router";
-import { ArrowLeft, User, Mail, Bell, LogOut, Save, Shield, Trash2 } from "lucide-react";
+import { ArrowLeft, User, Mail, Bell, LogOut, Save, Shield, Trash2, Smartphone } from "lucide-react";
+import { getInstallPrompt, MANUAL_INSTALL_HELP } from "../../lib/installPrompt.js";
 import sql from "../api/utils/sql"
 import { readUserId } from "../../lib/session.js";
 import { ensureSchema } from "../../lib/usage.js";
@@ -192,6 +193,37 @@ export default function SettingsPage() {
 
             </div>
         </div>
+
+      {/* INSTALL THE APP — butonul „de reamintit" după ce banner-ul a fost închis cu X */}
+      <div className="mt-6 bg-white rounded-2xl border border-green-100 shadow-sm p-5">
+        <div className="flex items-start gap-3">
+          <div className="bg-green-50 p-2 rounded-full text-green-600 shrink-0">
+            <Smartphone size={18} />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-bold text-gray-900 text-sm">Install the app on your phone</h3>
+            <p className="text-xs text-gray-500 mt-1 mb-3">
+              Closed the install banner earlier? No problem — you can always install PetAssistant
+              here. It opens full-screen and works like a normal app.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                const p = getInstallPrompt();
+                if (p) {
+                  p.prompt();
+                  p.userChoice?.then(() => {}).catch(() => {});
+                } else {
+                  alert(MANUAL_INSTALL_HELP);
+                }
+              }}
+              className="bg-green-600 hover:bg-green-700 text-white font-bold text-xs px-4 py-2 rounded-lg"
+            >
+              Install the app
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* DANGER ZONE — ștergerea contului (cerință Google Play) */}
       <div className="mt-6 bg-white rounded-2xl border border-red-100 shadow-sm p-5">
