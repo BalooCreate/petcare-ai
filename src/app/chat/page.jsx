@@ -336,7 +336,7 @@ export default function ChatPage() {
                 </div>
                 <ul className="text-xs text-gray-700 space-y-1 mb-3">
                   <li>✓ 100 AI questions / month</li>
-                  <li>✓ Full GPT-4o, no ads</li>
+                  <li>✓ Advanced AI, no ads</li>
                   <li>✓ Lifetime access, one-time payment</li>
                 </ul>
                 <Link to="/pricing" className="block w-full bg-green-600 text-white text-center font-bold py-3 rounded-xl hover:bg-green-700">

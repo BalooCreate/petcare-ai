@@ -36,10 +36,9 @@ export async function loader({ request }) {
 // ============================================================
 //  DEMO RESULTS (fallback when there is no OpenAI key or the AI errors out)
 // ============================================================
-const EMERGENCY_PLACES = [
-  { name: "VetLife Emergency 24/7", dist: "1.2 km", type: "Emergency", open: true },
-  { name: "Animal City Hospital", dist: "3.5 km", type: "Emergency", open: true },
-];
+// ATENTIE: NU afisam nume de clinici sau distante inventate.
+// Sa arati "spital de urgenta 24/7 la 1,2 km" cuiva cu animalul intoxicat este PERICULOS.
+// Daca vom adauga clinici vreodata, ele trebuie sa vina din date reale si verificabile.
 
 function demoResult(mode) {
   if (mode === 'rx') {
@@ -47,8 +46,8 @@ function demoResult(mode) {
       status: 'danger',
       title: '⚠️ Potential Toxicity Detected',
       description: 'Analyzed Item: Human Ibuprofen. WARNING: High toxicity risk for pets. Do not administer!',
-      recommendation: 'It is late. Showing 24/7 EMERGENCY Hospitals nearby:',
-      places: EMERGENCY_PLACES,
+      recommendation: 'This looks like an emergency. Contact your vet or the nearest emergency veterinary clinic right away. If you are unsure, call your vet — day or night.',
+      places: undefined,
     };
   }
   if (mode === 'food') {
@@ -78,7 +77,7 @@ function demoResult(mode) {
 }
 
 // ============================================================
-//  REAL AI ANALYSIS (GPT-4o / GPT-4o-mini, depending on plan)
+//  REAL AI ANALYSIS (model setat din variabilele de mediu, per plan)
 // ============================================================
 const SCAN_PROMPTS = {
   rx: 'Analyze this image for a pet owner. Identify if it is a medication, supplement, human drug, plant, or chemical. Determine whether it is TOXIC or SAFE for dogs and cats. If toxic or dangerous, status must be "danger".',
@@ -123,8 +122,8 @@ function normalizeResult(parsed, mode) {
     description: description.slice(0, 800),
     context: clean(parsed.context).slice(0, 300) || undefined,
     recommendation: recommendation.slice(0, 600),
-    // For emergencies, add the 24/7 hospitals
-    places: status === 'danger' ? EMERGENCY_PLACES : undefined,
+    // Fara clinici inventate. Ajutorul real vine doar din surse reale.
+    places: undefined,
     _mode: mode,
   };
 }

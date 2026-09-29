@@ -19,7 +19,7 @@ const PLANS = {
       "5 AI questions / month",
       "3 smart scans / month",
       "Basic calendar",
-      "With discreet ads"
+      "Free forever — no card"
     ],
     buttonStyle: "border-2 border-gray-200 text-gray-700 hover:border-green-600 hover:text-green-600"
   },
@@ -40,11 +40,11 @@ const PLANS = {
     features: [
       "Up to 3 pets",
       "100 AI questions / month",
-      "Unlimited scans",
+      "100 scans / month,",
       "No ads",
-      "PDF export for your vet",
+      "Advanced AI answers",
       "Priority support",
-      "Full GPT-4o"
+      "Lifetime access"
     ],
     buttonStyle: "bg-green-600 text-white hover:bg-green-700 shadow-lg shadow-green-200"
   },
@@ -65,9 +65,8 @@ const PLANS = {
       "UNLIMITED pets",
       "UNLIMITED AI",
       "Full history",
-      "Share with family + vet",
-      "24/7 Priority AI",
-      "API access",
+      "Priority support",
+      "Advanced AI answers",
       "Everything in Starter"
     ],
     buttonStyle: "bg-gray-900 text-white hover:bg-black"
@@ -112,7 +111,7 @@ export function PricingPlans({
                 <Zap size={16} className="text-orange-500" /> Lifetime — one-time payment (Recommended)
               </div>
             </div>
-            <p className="text-xs text-gray-400 mt-2">Save 80% compared to a monthly subscription</p>
+            <p className="text-xs text-gray-400 mt-2">Save 76% compared to a monthly subscription</p>
         </div>
 
         {/* ══ OFERTA MEMBRU FONDATOR (contor real) ══ */}

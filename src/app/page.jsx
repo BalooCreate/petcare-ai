@@ -1,11 +1,24 @@
-import { Link } from "react-router";
+import { Link, useLoaderData } from "react-router";
 import { 
   PawPrint, Calendar, Activity, ShieldCheck, Check, Star, 
   Camera, MessageCircle, Heart, Zap, Gift, Clock, Users, Sparkles
 } from "lucide-react";
-import InstallBanner from "../components/InstallBanner"; 
+import InstallBanner from "../components/InstallBanner";
+import { getFoundingStatus } from "../lib/founding.js"; 
+
+// Contorul REAL al ofertei de fondator (citit din baza de date, nu inventat).
+// Limita de 1,5s: daca baza de date raspunde greu, pagina se incarca oricum
+// (fara contor), in loc sa tina vizitatorul sa astepte.
+export async function loader() {
+  const founding = await Promise.race([
+    getFoundingStatus().catch(() => null),
+    new Promise((resolve) => setTimeout(() => resolve(null), 1500)),
+  ]);
+  return { founding };
+}
 
 export default function LandingPage() {
+  const { founding } = useLoaderData();
   return (
     <div className="min-h-screen bg-white font-sans text-gray-800">
       {/* NAVBAR */}
@@ -46,7 +59,7 @@ export default function LandingPage() {
         </h1>
         
         <p className="text-gray-600 text-[17px] max-w-2xl mx-auto mb-3 leading-relaxed">
-          Manage routines, health records, and get AI advice from a vet. <br />
+          Manage routines, health records, and get instant AI answers. <br />
           <span className="font-bold text-gray-900">Start free in 20 seconds, no card.</span> Pay only if you love it.
         </p>
 
@@ -75,7 +88,7 @@ export default function LandingPage() {
             <div className="w-7 h-7 rounded-full bg-orange-200 border-2 border-white flex items-center justify-center text-[10px]">🐱</div>
             <div className="w-7 h-7 rounded-full bg-blue-200 border-2 border-white flex items-center justify-center text-[10px]">🐾</div>
           </div>
-          <span><strong className="text-gray-900">1,200+</strong> happy pet parents • ⭐ 4.9/5</span>
+          <span><strong className="text-gray-900">Built by a pet owner</strong> in Bucharest • Free to start</span>
         </div>
       </div>
 
@@ -83,8 +96,8 @@ export default function LandingPage() {
       <div className="py-6 bg-white border-y border-gray-100">
         <div className="max-w-6xl mx-auto px-6 flex flex-wrap justify-center gap-8 text-xs font-bold text-gray-400 uppercase tracking-widest">
           <span className="flex items-center gap-2"><ShieldCheck size={16} className="text-green-500" /> Date criptate</span>
-          <span className="flex items-center gap-2"><Heart size={16} className="text-red-400" /> Iubit de veterinari</span>
-          <span className="flex items-center gap-2"><Zap size={16} className="text-orange-400" /> Answers in 3 seconds</span>
+          <span className="flex items-center gap-2"><Heart size={16} className="text-red-400" /> For dog &amp; cat owners</span>
+          <span className="flex items-center gap-2"><Zap size={16} className="text-orange-400" /> Fast AI answers</span>
           <span className="flex items-center gap-2"><Users size={16} className="text-blue-400" /> 100% free to start</span>
         </div>
       </div>
@@ -94,7 +107,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900">Everything you need, in one place</h2>
-            <p className="text-gray-500 mt-3 max-w-xl mx-auto">From schedules to AI advice, PetAssistant is like a vet in your pocket — free to start.</p>
+            <p className="text-gray-500 mt-3 max-w-xl mx-auto">From schedules to AI help, PetAssistant keeps your pet's care in one place — free to start.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
             <div className="bg-[#F1FFF6] p-6 rounded-[1.5rem] border border-green-100 hover:shadow-lg transition group">
@@ -105,7 +118,7 @@ export default function LandingPage() {
             </div>
             <div className="bg-blue-50 p-6 rounded-[1.5rem] border border-blue-100 hover:shadow-lg transition group">
               <div className="bg-white w-12 h-12 rounded-xl flex items-center justify-center shadow-sm mb-4 group-hover:scale-110 transition"><MessageCircle className="text-blue-600" /></div>
-              <h3 className="font-bold text-gray-900">AI Vet</h3>
+              <h3 className="font-bold text-gray-900">AI Assistant</h3>
               <p className="text-sm text-gray-500 mt-1">Ask anything, send photos, get instant answers.</p>
               <span className="text-[11px] font-bold text-blue-600 mt-3 inline-block bg-blue-100 px-2 py-1 rounded-full">5 FREE / MONTH</span>
             </div>
@@ -136,6 +149,11 @@ export default function LandingPage() {
               Start free, <span className="text-green-600">upgrade only if you love it</span> 🐶
             </h2>
             <p className="text-gray-500 mt-3">No credit card. No expiring trial. Free forever with 1 pet.</p>
+            {founding?.open && (
+              <div className="inline-flex items-center gap-2 mt-5 bg-white border border-green-200 text-green-700 px-4 py-2 rounded-full text-xs font-bold shadow-sm">
+                🏆 Founding Member offer — {founding.remaining} of {founding.total} lifetime spots left
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
@@ -147,7 +165,7 @@ export default function LandingPage() {
                 <li className="flex gap-2"><Check size={16} className="text-green-500 mt-0.5" /> 1 pet</li>
                 <li className="flex gap-2"><Check size={16} className="text-green-500 mt-0.5" /> 5 AI chats / month</li>
                 <li className="flex gap-2"><Check size={16} className="text-green-500 mt-0.5" /> Health journal</li>
-                <li className="flex gap-2"><Check size={16} className="text-gray-300 mt-0.5" /> <span className="text-gray-400">With discreet ads</span></li>
+                <li className="flex gap-2"><Check size={16} className="text-green-500 mt-0.5" /> 3 smart scans / month</li>
               </ul>
               <Link to="/signup?plan=free" className="block w-full py-3 text-center rounded-xl border-2 border-gray-900 font-bold text-gray-900 hover:bg-gray-900 hover:text-white transition">Start Free</Link>
             </div>
@@ -161,8 +179,8 @@ export default function LandingPage() {
               <ul className="space-y-2.5 text-sm text-gray-800 font-medium mb-6">
                 <li className="flex gap-2"><div className="bg-green-100 rounded-full p-0.5"><Check size={12} className="text-green-600" /></div> 3 pets</li>
                 <li className="flex gap-2"><div className="bg-green-100 rounded-full p-0.5"><Check size={12} className="text-green-600" /></div> 100 AI chats / month</li>
-                <li className="flex gap-2"><div className="bg-green-100 rounded-full p-0.5"><Check size={12} className="text-green-600" /></div> Unlimited scans, no ads</li>
-                <li className="flex gap-2"><div className="bg-green-100 rounded-full p-0.5"><Check size={12} className="text-green-600" /></div> PDF export + GPT-4o</li>
+                <li className="flex gap-2"><div className="bg-green-100 rounded-full p-0.5"><Check size={12} className="text-green-600" /></div> 100 scans / month, no ads</li>
+                <li className="flex gap-2"><div className="bg-green-100 rounded-full p-0.5"><Check size={12} className="text-green-600" /></div> Advanced AI answers</li>
               </ul>
               <Link to="/signup?plan=starter_lifetime" className="block w-full py-3.5 text-center rounded-xl bg-green-600 text-white font-bold hover:bg-green-700 shadow-lg shadow-green-200 transition">Get Lifetime €29 🚀</Link>
               <p className="text-[11px] text-center text-gray-400 mt-2">30-day guarantee • One-time payment</p>
@@ -174,9 +192,9 @@ export default function LandingPage() {
               <div className="flex items-baseline gap-2 mb-1"><span className="text-4xl font-extrabold">€49</span><span className="text-sm text-gray-500 line-through">€240</span></div>
               <p className="text-xs font-bold text-orange-400 mb-4">lifetime access, unlimited pets</p>
               <ul className="space-y-2.5 text-sm text-gray-300 mb-6">
-                <li className="flex gap-2"><Check size={16} className="text-orange-400" /> Everything unlimited</li>
-                <li className="flex gap-2"><Check size={16} className="text-orange-400" /> Family + vet sharing</li>
-                <li className="flex gap-2"><Check size={16} className="text-orange-400" /> Priority AI 24/7</li>
+                <li className="flex gap-2"><Check size={16} className="text-orange-400" /> Everything in Starter</li>
+                <li className="flex gap-2"><Check size={16} className="text-orange-400" /> Unlimited pets</li>
+                <li className="flex gap-2"><Check size={16} className="text-orange-400" /> Priority support</li>
               </ul>
               <Link to="/signup?plan=pro_lifetime" className="block w-full py-3 text-center rounded-xl bg-white text-gray-900 font-bold hover:bg-gray-100 transition">Get Pro €49</Link>
             </div>
@@ -212,16 +230,20 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* TESTIMONIALS */}
+      {/* WHY IT EXISTS — povestea reala, fara recenzii inventate */}
       <div className="py-20 px-6 bg-[#F1FFF6]">
-        <div className="max-w-6xl mx-auto text-center mb-12">
-          <h2 className="text-3xl font-bold text-gray-900">Loved by pet parents</h2>
-          <div className="flex justify-center gap-1 text-yellow-400 mt-3"><Star size={18} fill="currentColor" /><Star size={18} fill="currentColor" /><Star size={18} fill="currentColor" /><Star size={18} fill="currentColor" /><Star size={18} fill="currentColor" /></div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border"><p className="text-gray-700 text-sm italic mb-4">“I started free and after 3 days I got the €29 Lifetime. Best €29 I ever spent on my dog!”</p><p className="font-bold text-sm">Sarah M. • 2 dogs</p></div>
-          <div className="bg-white p-6 rounded-2xl shadow-sm border"><p className="text-gray-700 text-sm italic mb-4">“The AI spotted the allergy from a photo. My vet was impressed by the health log.”</p><p className="font-bold text-sm">Mike R. • 1 cat</p></div>
-          <div className="bg-white p-6 rounded-2xl shadow-sm border"><p className="text-gray-700 text-sm italic mb-4">“Free for 1 pet is great. I have 3 cats, so I upgraded to the €29 lifetime plan.”</p><p className="font-bold text-sm">Emma L. • 3 cats</p></div>
+        <div className="max-w-3xl mx-auto text-center">
+          <h2 className="text-3xl font-bold text-gray-900">Why PetAssistant exists</h2>
+          <p className="text-gray-600 text-[17px] leading-relaxed mt-6">
+            At 2 AM my German Shepherd, Baloo, was limping badly. I spent four hours on Google
+            convincing myself he had a torn ligament. In the morning the vet found a grass seed
+            stuck in his paw.
+          </p>
+          <p className="text-gray-600 text-[17px] leading-relaxed mt-4">
+            That night is why this app exists — so no pet owner has to guess alone at 2 AM.
+          </p>
+          <p className="font-bold text-sm text-gray-900 mt-6">The founder, and Baloo&apos;s human 🐾</p>
+          <p className="text-xs text-gray-400 mt-8">We don&apos;t publish invented reviews. When we have real ones, they will appear here.</p>
         </div>
       </div>
 
@@ -236,7 +258,7 @@ export default function LandingPage() {
             Ready to take better <br />care of your furry friend?
           </h2>
           <p className="text-green-100 max-w-xl mx-auto mb-8 text-[17px]">
-            Join 1,200+ pet parents who use PetAssistant every day. Start free now.
+            Be one of the first 100 Founding Members. Free to start — no card needed.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-3">
             <Link to="/signup?plan=free" className="bg-white text-green-700 px-8 py-4 rounded-2xl font-bold text-lg shadow-xl hover:bg-green-50 transition flex items-center justify-center gap-2">
