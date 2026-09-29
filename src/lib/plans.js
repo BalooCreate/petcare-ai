@@ -123,7 +123,7 @@ export function getUsagePercent(planId, action, used) {
 /** Display text for "X of Y". */
 export function formatUsage(planId, action, used) {
   const limit = getLimit(planId, action);
-  if (limit >= UNLIMITED_THRESHOLD) return 'Nelimitat';
+  if (limit >= UNLIMITED_THRESHOLD) return 'Unlimited';
   return `${used}/${limit}`;
 }
 

@@ -95,7 +95,7 @@ export default function LandingPage() {
       {/* TRUST BAR */}
       <div className="py-6 bg-white border-y border-gray-100">
         <div className="max-w-6xl mx-auto px-6 flex flex-wrap justify-center gap-8 text-xs font-bold text-gray-400 uppercase tracking-widest">
-          <span className="flex items-center gap-2"><ShieldCheck size={16} className="text-green-500" /> Date criptate</span>
+          <span className="flex items-center gap-2"><ShieldCheck size={16} className="text-green-500" /> Encrypted data</span>
           <span className="flex items-center gap-2"><Heart size={16} className="text-red-400" /> For dog &amp; cat owners</span>
           <span className="flex items-center gap-2"><Zap size={16} className="text-orange-400" /> Fast AI answers</span>
           <span className="flex items-center gap-2"><Users size={16} className="text-blue-400" /> 100% free to start</span>
