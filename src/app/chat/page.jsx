@@ -280,7 +280,21 @@ export default function ChatPage() {
                     {msg.image && (
                         <img src={msg.image} alt="Upload" className="w-full h-48 object-cover rounded-xl mb-3 border border-white/20" />
                     )}
-                    <p>{msg.text}</p>
+                    <div className="space-y-2">
+                      {String(msg.text).split("\n").map((line, li) => (
+                        <p key={li}>
+                          {line.split(/(\*\*[^*]+\*\*)/g).map((part, pi) =>
+                            part.length > 4 && part.startsWith("**") && part.endsWith("**") ? (
+                              <strong key={pi} className="font-semibold text-gray-900">
+                                {part.slice(2, -2)}
+                              </strong>
+                            ) : (
+                              <span key={pi}>{part}</span>
+                            )
+                          )}
+                        </p>
+                      ))}
+                    </div>
                     {msg.isLimit && (
                       <div className="mt-3">
                         <Link to="/pricing" className="inline-flex bg-gray-900 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-black">
