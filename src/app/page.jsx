@@ -4,7 +4,6 @@ import {
   Camera, MessageCircle, Heart, Zap, Gift, Clock, Users, Sparkles
 } from "lucide-react";
 import InstallBanner from "../components/InstallBanner";
-import VideoShowcase from "../components/VideoShowcase";
 import { getFoundingStatus } from "../lib/founding.js"; 
 
 // Contorul REAL al ofertei de fondator (citit din baza de date, nu inventat).
@@ -230,10 +229,6 @@ export default function LandingPage() {
           </div>
         </div>
       </div>
-
-      {/* VIDEO — ce este + cum se foloseste */}
-      <VideoShowcase />
-
       {/* WHY IT EXISTS — povestea reala, fara recenzii inventate */}
       <div className="py-20 px-6 bg-[#F1FFF6]">
         <div className="max-w-3xl mx-auto text-center">
