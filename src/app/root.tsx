@@ -15,7 +15,7 @@ import { Toaster } from "sonner";
    META TAGS COMPLETE PWA (iOS + Android)
 -------------------------------------------- */
 export const meta = () => [
-  { title: "PetAssistant" },
+  { title: "PetAssistant — AI Pet Care & Health Records for Dogs and Cats" },
   { charSet: "utf-8" },
 
   // Viewport + notch support
@@ -40,7 +40,7 @@ export const meta = () => [
   { httpEquiv: "Permissions-Policy", content: "interest-cohort=()" },
 
   // SEO
-  { name: "description", content: "Your AI-powered pet assistant for care, routines, reminders and health tracking." },
+  { name: "description", content: "Chat with an AI pet assistant, scan food and medicine labels, and keep your dog's or cat's health records, vaccines and reminders in one place. Free to start." },
   { name: "robots", content: "index,follow" },
 
   // SOCIAL – Facebook / WhatsApp
