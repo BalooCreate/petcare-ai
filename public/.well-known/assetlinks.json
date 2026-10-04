@@ -3,10 +3,9 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "com.petassists.app",
+      "package_name": "com.petassists.twa",
       "sha256_cert_fingerprints": [
-        "INLOCUIESTE_CU_AMPREINTA_SHA256_DIN_PLAY_CONSOLE",
-        "INLOCUIESTE_CU_AMPREINTA_DIN_BUBBLEWRAP_KEYSTORE"
+        "A1:31:1C:05:68:34:8E:B2:22:1C:8E:05:C0:3C:98:48:1E:09:4B:A1:83:7D:E0:B5:A6:E0:67:F7:82:AB:69:2D"
       ]
     }
   }
