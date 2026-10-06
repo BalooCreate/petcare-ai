@@ -1,0 +1,17 @@
+# PetAssistant
+
+> AI pet care assistant for dog and cat owners. Ask anything about food, health or training and get a clear answer in seconds. Free forever for 1 pet, no credit card needed.
+
+## Main pages
+- [Home](https://petassists.com/): what PetAssistant is and what it does
+- [Pricing](https://petassists.com/pricing): Free forever plan, 29 EUR lifetime, 49 EUR Pro Family
+- [Create a free account](https://petassists.com/signup): no credit card required
+- [Contact](https://petassists.com/contact): support
+- [Terms of service](https://petassists.com/terms)
+- [Privacy policy](https://petassists.com/privacy)
+- [Refund policy](https://petassists.com/refund): 30-day guarantee on the lifetime plan
+
+## About
+- PetAssistant helps owners organise pet care: instant AI answers, food and medicine label scanning, health records and reminders.
+- It does not diagnose conditions and does not replace a veterinarian.
+- Publisher: DUAL DELIGHT SRL (Romania). Website: https://petassists.com

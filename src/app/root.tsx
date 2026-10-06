@@ -138,7 +138,6 @@ export function ErrorBoundary() {
   return <ErrorDisplay error={error} />;
 }
 
-
 /* -------------------------------------------
    LAYOUT ROOT
 -------------------------------------------- */
@@ -182,12 +181,6 @@ export function Layout({ children }: { children: ReactNode }) {
           }}
         />
 
-        {/* FontAwesome */}
-        <script
-          src="https://kit.fontawesome.com/2c15cc0cc7.js"
-          crossOrigin="anonymous"
-          async
-        />
       </body>
     </html>
   );
