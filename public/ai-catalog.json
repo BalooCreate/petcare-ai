@@ -1,11 +1,9 @@
 {
-  "@context": "https://agenticresourcediscovery.org/ns/ard/v0.91",
-  "specVersion": "0.91",
-  "publisher": {
-    "identifier": "urn:air:petassists.com",
+  "specVersion": "1.0",
+  "host": {
     "displayName": "PetAssistant",
-    "url": "https://petassists.com/"
+    "documentationUrl": "https://petassists.com/",
+    "logoUrl": "https://petassists.com/icon-512.png"
   },
-  "updated": "2026-10-06T00:00:00Z",
   "entries": []
 }
