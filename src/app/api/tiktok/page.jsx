@@ -1,19 +1,18 @@
-// ============================================================
-//  TikTok Publisher — API (rute publice pentru pagina /tiktok)
-//
-//  GET  /api/tiktok?action=start        -> trimite operatorul la TikTok (OAuth)
-//  GET  /api/tiktok?code=...&state=...  -> TikTok revine aici dupa autorizare
-//  GET  /api/tiktok?action=creator      -> cont conectat + optiuni de privacy
-//  GET  /api/tiktok?action=status&id=X  -> starea publicarii
-//  GET  /api/tiktok?action=logout       -> deconecteaza contul
-//  POST /api/tiktok?action=publish      -> urca + publica un video
-//
-//  ✅ Cheile TikTok stau DOAR pe server (Render -> Environment):
-//     TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET, TIKTOK_REDIRECT_URI
-//  ✅ Nu expunem niciodata secretul catre browser.
-// ============================================================
+import { json, redirect } from "react-router";
 
-import { redirect } from "react-router";
+// ------------------------------------------------------------
+//  PETGUARD PUBLISHER — API pentru publicare pe TikTok
+//  (Content Posting API: Direct Post + fallback la Inbox/draft)
+//
+//  GET   ?action=start           -> porneste OAuth (Login Kit)
+//  GET   ?code=...               -> schimb codul pe token
+//  GET   ?action=creator         -> contul conectat + optiunile lui
+//  GET   ?action=status&id=...   -> starea publicarii
+//  GET   ?action=code            -> codul pentru automatizarea pe PC
+//  GET   ?action=logout          -> deconectare
+//  POST  ?action=publish         -> publica (fisier urcat din browser SAU
+//                                   {video: "about"|"howto"} pentru clipurile noastre)
+// ------------------------------------------------------------
 
 const CLIENT_KEY = process.env.TIKTOK_CLIENT_KEY || "";
 const CLIENT_SECRET = process.env.TIKTOK_CLIENT_SECRET || "";
@@ -22,29 +21,34 @@ const REDIRECT_URI =
 const SCOPES =
   process.env.TIKTOK_SCOPES || "user.info.basic,video.publish,video.upload";
 
-// Videoclipurile noastre (fisiere deja publicate pe site, continut propriu)
+const MAX_BYTES = 100 * 1024 * 1024; // 100 MB per fisier
+const CHUNK = 60 * 1024 * 1024; // bucata max trimisa catre TikTok
+
 const VIDEOS = {
   about: {
     label: "About PetGuard — AI pet assistant",
-    url: process.env.TIKTOK_VIDEO_ABOUT || "https://transfer.archivete.am/fEcOq/petguard-demo-about.mp4",
+    url:
+      process.env.TIKTOK_VIDEO_ABOUT ||
+      "https://transfer.archivete.am/kDDlU/petguard-about-voice.mp4",
     title: "PetGuard — AI pet assistant for dogs and cats",
   },
   howto: {
     label: "How to use PetGuard",
-    url: process.env.TIKTOK_VIDEO_HOWTO || "https://transfer.archivete.am/1ZmpT/petguard-demo-howto.mp4",
+    url:
+      process.env.TIKTOK_VIDEO_HOWTO ||
+      "https://transfer.archivete.am/iZycV/petguard-howto-voice.mp4",
     title: "How to use PetGuard — quick walkthrough",
   },
 };
 
-const json = (body, status = 200, extraHeaders = {}) =>
-  new Response(JSON.stringify(body, null, 2), {
-    status,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": "no-store",
-      ...extraHeaders,
-    },
+function jsonRes(body, status = 200, extraHeaders = []) {
+  const headers = new Headers({
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": "no-store",
   });
+  extraHeaders.forEach((h) => headers.append("Set-Cookie", h));
+  return new Response(JSON.stringify(body, null, 2), { status, headers });
+}
 
 function getCookie(request, name) {
   const raw = request.headers.get("Cookie") || "";
@@ -60,7 +64,7 @@ function clearCookie(name) {
   return `${name}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
 }
 
-// Reimprospateaza token-ul daca a expirat (access = 24h, refresh = 365 zile)
+// Reimprospateaza token-ul (access = 24h, refresh = 365 zile)
 async function refreshAccessToken(refreshToken) {
   const body = new URLSearchParams({
     client_key: CLIENT_KEY,
@@ -76,7 +80,6 @@ async function refreshAccessToken(refreshToken) {
   return r.json();
 }
 
-// Apel catre API-ul TikTok cu reincercare automata dupa refresh
 async function tiktokFetch(request, url, init = {}) {
   let token = getCookie(request, "tt_at");
   const refreshToken = getCookie(request, "tt_rt");
@@ -122,7 +125,7 @@ export async function loader({ request }) {
   const err = url.searchParams.get("error");
 
   if (!CLIENT_KEY || !CLIENT_SECRET) {
-    return json(
+    return jsonRes(
       {
         error: "not_configured",
         hint: "Set TIKTOK_CLIENT_KEY and TIKTOK_CLIENT_SECRET in Render → Environment.",
@@ -131,32 +134,29 @@ export async function loader({ request }) {
     );
   }
 
-  // TikTok a refuzat autorizarea
   if (err) {
-    return redirect("/tiktok?failed=" + encodeURIComponent(err));
+    return redirect("/publisher?failed=" + encodeURIComponent(err));
   }
 
-  // 1) Pornire OAuth — trimitem la TikTok
+  // 1) Pornire OAuth
   if (action === "start") {
-    const state = crypto.randomUUID().replace(/-/g, "");
-    const auth = new URL("https://www.tiktok.com/v2/auth/authorize/");
-    auth.searchParams.set("client_key", CLIENT_KEY);
-    auth.searchParams.set("scope", SCOPES);
-    auth.searchParams.set("response_type", "code");
-    auth.searchParams.set("redirect_uri", REDIRECT_URI);
-    auth.searchParams.set("state", state);
-    const res = redirect(auth.toString());
+    const state = crypto.randomUUID();
+    const authUrl =
+      "https://www.tiktok.com/v2/auth/authorize/?" +
+      new URLSearchParams({
+        client_key: CLIENT_KEY,
+        response_type: "code",
+        scope: SCOPES,
+        redirect_uri: REDIRECT_URI,
+        state,
+      }).toString();
+    const res = redirect(authUrl);
     res.headers.append("Set-Cookie", cookie("tt_state", state, 600));
     return res;
   }
 
-  // 2) Revenirea de la TikTok (OAuth callback)
+  // 2) TikTok a trimis codul -> il schimbam pe token
   if (code) {
-    const state = url.searchParams.get("state") || "";
-    const saved = getCookie(request, "tt_state");
-    if (saved && state !== saved) {
-      return json({ error: "state_mismatch" }, 400);
-    }
     const body = new URLSearchParams({
       client_key: CLIENT_KEY,
       client_secret: CLIENT_SECRET,
@@ -171,30 +171,51 @@ export async function loader({ request }) {
     });
     const data = await r.json().catch(() => ({}));
     if (!data.access_token) {
-      return json({ error: "token_exchange_failed", tiktok: data }, 400);
+      return jsonRes({ error: "token_exchange_failed", tiktok: data }, 400);
     }
-    const res = redirect("/tiktok?connected=1");
-    res.headers.append("Set-Cookie", cookie("tt_at", data.access_token, data.expires_in || 86400));
-    res.headers.append("Set-Cookie", cookie("tt_rt", data.refresh_token || "", data.refresh_expires_in || 31536000));
+    const res = redirect("/publisher?connected=1");
+    res.headers.append(
+      "Set-Cookie",
+      cookie("tt_at", data.access_token, data.expires_in || 86400)
+    );
+    res.headers.append(
+      "Set-Cookie",
+      cookie("tt_rt", data.refresh_token || "", data.refresh_expires_in || 31536000)
+    );
     res.headers.append("Set-Cookie", cookie("tt_oid", data.open_id || "", 31536000));
-    res.headers.append("Set-Cookie", clearCookie("tt_state"));
     return res;
   }
 
-  // 3) Deconectare
   if (action === "logout") {
-    const res = redirect("/tiktok");
+    const res = redirect("/publisher");
     res.headers.append("Set-Cookie", clearCookie("tt_at"));
     res.headers.append("Set-Cookie", clearCookie("tt_rt"));
     res.headers.append("Set-Cookie", clearCookie("tt_oid"));
     return res;
   }
 
+  // 3) Codul pentru automatizare (motorul de pe PC)
+  if (action === "code") {
+    const rt = getCookie(request, "tt_rt");
+    if (!rt) {
+      return jsonRes(
+        { error: "not_connected", hint: "Connect to TikTok first, then try again." },
+        401
+      );
+    }
+    return jsonRes({
+      ok: true,
+      refresh_token: rt,
+      open_id: getCookie(request, "tt_oid"),
+      hint: "Paste this code into the installer window on your PC. Do not share it.",
+    });
+  }
+
   const hasToken = !!getCookie(request, "tt_at");
 
-  // 4) Contul conectat + optiunile de privacy (creator_info)
+  // 4) Contul conectat + optiunile lui (nickname/avatar/privacy/interactiuni)
   if (action === "creator") {
-    if (!hasToken) return json({ connected: false });
+    if (!hasToken) return jsonRes({ connected: false });
 
     const creator = await tiktokFetch(
       request,
@@ -217,122 +238,174 @@ export async function loader({ request }) {
       token_expired: creator.invalid || user.invalid,
       videos: Object.entries(VIDEOS).map(([k, v]) => ({ key: k, label: v.label })),
     };
-    const headers = new Headers({
-      "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": "no-store",
-    });
-    [...creator.newCookies, ...user.newCookies].forEach((c) =>
-      headers.append("Set-Cookie", c)
-    );
-    return new Response(JSON.stringify(payload, null, 2), { status: 200, headers });
+    return jsonRes(payload, 200, [...creator.newCookies, ...user.newCookies]);
   }
 
   // 5) Starea publicarii
   if (action === "status") {
-    if (!hasToken) return json({ error: "not_connected" }, 401);
+    if (!hasToken) return jsonRes({ error: "not_connected" }, 401);
     const publishId = url.searchParams.get("id") || "";
-    if (!publishId) return json({ error: "missing_id" }, 400);
+    if (!publishId) return jsonRes({ error: "missing_id" }, 400);
     const r = await tiktokFetch(
       request,
       "https://open.tiktokapis.com/v2/post/publish/status/fetch/",
       { method: "POST", body: JSON.stringify({ publish_id: publishId }) }
     );
-    return json({ ok: true, status: r.data?.data?.status || null, fail_reason: r.data?.data?.fail_reason || null, tiktok: r.data });
+    return jsonRes(
+      {
+        ok: true,
+        status: r.data?.data?.status || null,
+        fail_reason: r.data?.data?.fail_reason || null,
+        tiktok: r.data,
+      },
+      200,
+      r.newCookies
+    );
   }
 
-  return json({ error: "unknown_action", hint: "use ?action=start|creator|status|logout" }, 400);
+  return jsonRes(
+    { error: "unknown_action", hint: "use ?action=start|creator|status|code|logout" },
+    400
+  );
 }
 
 // ------------------------------------------------------------
-//  POST — publicare video (init + upload + intoarce publish_id)
+//  POST — publicare
 // ------------------------------------------------------------
 export async function action({ request }) {
   const url = new URL(request.url);
   const action = url.searchParams.get("action") || "";
 
-  if (!CLIENT_KEY || !CLIENT_SECRET) {
-    return json({ error: "not_configured" }, 500);
-  }
-  if (action !== "publish") {
-    return json({ error: "unknown_action" }, 400);
-  }
-  if (!getCookie(request, "tt_at")) {
-    return json({ error: "not_connected" }, 401);
-  }
+  if (!CLIENT_KEY || !CLIENT_SECRET) return jsonRes({ error: "not_configured" }, 500);
+  if (action !== "publish") return jsonRes({ error: "unknown_action" }, 400);
+  if (!getCookie(request, "tt_at")) return jsonRes({ error: "not_connected" }, 401);
 
-  let body = {};
+  const contentType = request.headers.get("content-type") || "";
+  let bytes = null;
+  let filename = "";
+  let title = "";
+  let privacy = "";
+  let allowComment = false;
+  let allowDuet = false;
+  let allowStitch = false;
+  let brandOrganic = false;
+  let brandContent = false;
+  let isAigc = false;
+  let consent = false;
+
   try {
-    body = await request.json();
+    if (contentType.includes("multipart/form-data")) {
+      const form = await request.formData();
+      const file = form.get("video");
+      title = String(form.get("title") || "");
+      privacy = String(form.get("privacy") || "").toUpperCase();
+      const yes = (k) => String(form.get(k) || "") === "true";
+      allowComment = yes("allow_comment");
+      allowDuet = yes("allow_duet");
+      allowStitch = yes("allow_stitch");
+      brandOrganic = yes("brand_organic");
+      brandContent = yes("brand_content");
+      isAigc = yes("is_aigc");
+      consent = yes("consent");
+      if (!file || typeof file === "string" || !file.size) {
+        return jsonRes({ error: "missing_file" }, 400);
+      }
+      if (file.size > MAX_BYTES) {
+        return jsonRes(
+          {
+            error: "file_too_big",
+            size: file.size,
+            max: MAX_BYTES,
+            hint: "Please upload a shorter video (max 100 MB).",
+          },
+          400
+        );
+      }
+      filename = file.name || "video.mp4";
+      bytes = new Uint8Array(await file.arrayBuffer());
+    } else {
+      const body = await request.json().catch(() => ({}));
+      const videoKey = String(body.video || "");
+      const video = VIDEOS[videoKey];
+      if (!video) return jsonRes({ error: "unknown_video" }, 400);
+      title = String(body.title || video.title);
+      privacy = String(body.privacy || "").toUpperCase();
+      allowComment = !!body.allow_comment;
+      allowDuet = !!body.allow_duet;
+      allowStitch = !!body.allow_stitch;
+      brandOrganic = !!body.brand_organic;
+      brandContent = !!body.brand_content;
+      isAigc = !!body.is_aigc;
+      consent = !!body.consent;
+      filename = videoKey + ".mp4";
+      const vres = await fetch(video.url);
+      if (!vres.ok) {
+        return jsonRes({ error: "video_fetch_failed", status: vres.status }, 400);
+      }
+      const buf = new Uint8Array(await vres.arrayBuffer());
+      const head = new TextDecoder("latin1").decode(buf.slice(0, 16));
+      if (!head.includes("ftyp")) {
+        return jsonRes({ error: "video_not_mp4", url: video.url }, 400);
+      }
+      bytes = buf;
+    }
   } catch (e) {
-    return json({ error: "bad_json" }, 400);
+    return jsonRes({ error: "bad_request", message: String(e) }, 400);
   }
 
-  const videoKey = String(body.video || "about");
-  const video = VIDEOS[videoKey];
-  if (!video) return json({ error: "unknown_video" }, 400);
+  // ---- reguli TikTok (cerute la audit) ----
+  const PROBLEMS = [];
+  if (!privacy) PROBLEMS.push("Choose who can see this post.");
+  if (!consent) PROBLEMS.push("Please accept the TikTok posting terms.");
+  if (brandContent && privacy === "SELF_ONLY")
+    PROBLEMS.push("Branded content visibility cannot be set to private.");
+  if (PROBLEMS.length) return jsonRes({ error: "validation", problems: PROBLEMS }, 400);
 
-  const privacy = String(body.privacy || "").toUpperCase();
-  if (!privacy) return json({ error: "missing_privacy" }, 400);
-
-  const title = String(body.title || video.title).slice(0, 2200);
-
-  // 1. Descarcam video-ul (continut propriu)
-  const vres = await fetch(video.url);
-  if (!vres.ok) {
-    return json({ error: "video_fetch_failed", status: vres.status, url: video.url }, 400);
-  }
-  const bytes = new Uint8Array(await vres.arrayBuffer());
   const size = bytes.length;
+  if (size < 100 * 1024) return jsonRes({ error: "video_too_small", size }, 400);
+  const head16 = new TextDecoder("latin1").decode(bytes.slice(0, 16));
+  if (!head16.includes("ftyp")) {
+    return jsonRes({ error: "video_not_mp4", filename, size }, 400);
+  }
 
-  // 1b. Verificam ca e VIDEO real (MP4), nu HTML/pagina de eroare
-  const head = new TextDecoder("latin1").decode(bytes.slice(0, 16));
-  if (!head.includes("ftyp")) {
-    return json(
-      {
-        error: "video_not_mp4",
-        url: video.url,
-        size,
-        content_type: vres.headers.get("content-type"),
-        hint: "The URL did not return a real MP4 file. Check the video source.",
-      },
-      400
-    );
-  }
-  if (size < 100000) {
-    return json({ error: "video_too_small", size, url: video.url }, 400);
-  }
+  const chunkSize = Math.min(size, CHUNK);
+  const chunkCount = Math.ceil(size / chunkSize);
 
   const sourceInfo = {
     source: "FILE_UPLOAD",
     video_size: size,
-    chunk_size: size,
-    total_chunk_count: 1,
+    chunk_size: chunkSize,
+    total_chunk_count: chunkCount,
   };
 
-  // 2a. Incercam PUBLICARE DIRECTA (video.publish)
+  const postInfo = {
+    title: String(title || "").slice(0, 2200),
+    privacy_level: privacy,
+    disable_comment: !allowComment,
+    disable_duet: !allowDuet,
+    disable_stitch: !allowStitch,
+    brand_organic_toggle: !!brandOrganic,
+    brand_content_toggle: !!brandContent,
+    is_aigc: !!isAigc,
+  };
+
+  // 1. Direct Post
   const direct = await tiktokFetch(
     request,
     "https://open.tiktokapis.com/v2/post/publish/video/init/",
     {
       method: "POST",
-      body: JSON.stringify({
-        post_info: {
-          title,
-          privacy_level: privacy,
-          disable_comment: false,
-          disable_duet: false,
-          disable_stitch: false,
-        },
-        source_info: sourceInfo,
-      }),
+      body: JSON.stringify({ post_info: postInfo, source_info: sourceInfo }),
     }
   );
 
   let mode = "direct";
   let initData = direct.data;
 
-  // 2b. Daca Direct Post e refuzat -> trimitem ca DRAFT in inbox (video.upload)
+  // 2. Daca Direct Post e refuzat (audit inca nefinalizat) -> Inbox (draft)
+  let directError = null;
   if (!initData?.data?.publish_id) {
+    directError = direct.data?.error || null;
     const inbox = await tiktokFetch(
       request,
       "https://open.tiktokapis.com/v2/post/publish/inbox/video/init/",
@@ -342,7 +415,7 @@ export async function action({ request }) {
       mode = "inbox";
       initData = inbox.data;
     } else {
-      return json(
+      return jsonRes(
         {
           error: "init_failed",
           tried: ["direct", "inbox"],
@@ -357,26 +430,42 @@ export async function action({ request }) {
   const publishId = initData?.data?.publish_id;
   const uploadUrl = initData?.data?.upload_url;
   if (!publishId || !uploadUrl) {
-    return json({ error: "init_failed", mode, tiktok: initData }, 400);
+    return jsonRes({ error: "init_failed", mode, tiktok: initData }, 400);
   }
 
-  // 3. Urcam octetii video
-  const putRes = await fetch(uploadUrl, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "video/mp4",
-      "Content-Length": String(size),
-      "Content-Range": `bytes 0-${size - 1}/${size}`,
-    },
-    body: bytes,
+  // 3. Urcam octetii (pe bucati daca e mare)
+  let offset = 0;
+  let part = 0;
+  while (offset < size) {
+    const end = Math.min(offset + chunkSize, size);
+    const slice = bytes.slice(offset, end);
+    const putRes = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "video/mp4",
+        "Content-Length": String(slice.length),
+        "Content-Range": `bytes ${offset}-${end - 1}/${size}`,
+      },
+      body: slice,
+    });
+    if (!putRes.ok) {
+      return jsonRes(
+        { error: "upload_failed", status: putRes.status, part: part + 1, publish_id: publishId },
+        400
+      );
+    }
+    offset = end;
+    part++;
+  }
+
+  return jsonRes({
+    ok: true,
+    mode,
+    publish_id: publishId,
+    video_size: size,
+    privacy,
+    filename,
+    chunk_count: chunkCount,
+    direct_error: directError,
   });
-
-  if (!putRes.ok) {
-    return json(
-      { error: "upload_failed", status: putRes.status, publish_id: publishId },
-      400
-    );
-  }
-
-  return json({ ok: true, mode, publish_id: publishId, video_size: size, privacy });
 }

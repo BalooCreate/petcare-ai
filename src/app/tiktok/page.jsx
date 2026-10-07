@@ -44,6 +44,9 @@ export default function TikTokPublisherPage() {
   const [publishId, setPublishId] = useState("");
   const [finalStatus, setFinalStatus] = useState("");
   const [log, setLog] = useState([]);
+  const [autoCode, setAutoCode] = useState("");
+  const [codeBusy, setCodeBusy] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
   const pollRef = useRef(null);
 
   const addLog = useCallback((line) => {
@@ -77,6 +80,36 @@ export default function TikTokPublisherPage() {
     }
   }, []);
 
+  const showCode = useCallback(async () => {
+    setCodeBusy(true);
+    setCodeCopied(false);
+    try {
+      const r = await fetch("/api/tiktok?action=code", { cache: "no-store" });
+      const d = await r.json();
+      if (d.refresh_token) {
+        setAutoCode(d.refresh_token);
+        addLog("Automation code ready — copy it into the PC script.");
+      } else {
+        setAutoCode("");
+        addLog("Could not get the code: " + (d.error || "unknown") + " — connect first.");
+      }
+    } catch (e) {
+      addLog("Could not get the code: " + String(e));
+    } finally {
+      setCodeBusy(false);
+    }
+  }, [addLog]);
+
+  const copyCode = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(autoCode);
+      setCodeCopied(true);
+      addLog("Automation code copied ✓");
+    } catch (e) {
+      addLog("Copy did not work — select the text and copy it manually.");
+    }
+  }, [autoCode, addLog]);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("connected")) {
@@ -99,7 +132,8 @@ export default function TikTokPublisherPage() {
       const r = await fetch("/api/tiktok?action=publish", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ video, privacy, title }),
+        body: JSON.stringify({
+          consent: true, video, privacy, title }),
       });
       const d = await r.json();
       addLog("Init response: " + JSON.stringify(d));
@@ -206,6 +240,43 @@ export default function TikTokPublisherPage() {
               <a href="/api/tiktok?action=logout" className="text-xs text-gray-400 underline hover:text-gray-600">
                 Disconnect
               </a>
+            </div>
+
+            {/* Automatizare — codul pentru motorul de pe PC */}
+            <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+              <div className="text-sm font-semibold text-gray-700">Automation (your PC engine)</div>
+              <p className="mt-1 text-xs text-gray-500">
+                Copy the code below and paste it into the PC script. Then every time a video is
+                posted to YouTube and Instagram, it also lands in your TikTok Inbox as a draft —
+                you only tap Post.
+              </p>
+              <button
+                onClick={showCode}
+                disabled={codeBusy}
+                className="mt-3 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800 disabled:opacity-50"
+              >
+                {codeBusy ? "Preparing…" : "Show automation code"}
+              </button>
+              {autoCode && (
+                <div className="mt-3">
+                  <textarea
+                    readOnly
+                    value={autoCode}
+                    rows={3}
+                    onFocus={(e) => e.target.select()}
+                    className="w-full rounded-lg border border-gray-200 bg-gray-50 p-2 font-mono text-xs"
+                  />
+                  <button
+                    onClick={copyCode}
+                    className="mt-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                  >
+                    {codeCopied ? "✅ Copied" : "Copy code"}
+                  </button>
+                  <p className="mt-2 text-xs text-red-600">
+                    Never share this code with anyone. It is the key to your TikTok account.
+                  </p>
+                </div>
+              )}
             </div>
 
             {state.error && (
