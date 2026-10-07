@@ -26,12 +26,12 @@ const SCOPES =
 const VIDEOS = {
   about: {
     label: "About PetGuard — AI pet assistant",
-    url: "https://petassists.com/about-petassistant.mp4",
+    url: process.env.TIKTOK_VIDEO_ABOUT || "https://transfer.archivete.am/fEcOq/petguard-demo-about.mp4",
     title: "PetGuard — AI pet assistant for dogs and cats",
   },
   howto: {
     label: "How to use PetGuard",
-    url: "https://petassists.com/how-to-use-petassistant.mp4",
+    url: process.env.TIKTOK_VIDEO_HOWTO || "https://transfer.archivete.am/1ZmpT/petguard-demo-howto.mp4",
     title: "How to use PetGuard — quick walkthrough",
   },
 };
@@ -276,13 +276,31 @@ export async function action({ request }) {
 
   const title = String(body.title || video.title).slice(0, 2200);
 
-  // 1. Descarcam video-ul nostru de pe site (continut propriu)
+  // 1. Descarcam video-ul (continut propriu)
   const vres = await fetch(video.url);
   if (!vres.ok) {
     return json({ error: "video_fetch_failed", status: vres.status, url: video.url }, 400);
   }
   const bytes = new Uint8Array(await vres.arrayBuffer());
   const size = bytes.length;
+
+  // 1b. Verificam ca e VIDEO real (MP4), nu HTML/pagina de eroare
+  const head = new TextDecoder("latin1").decode(bytes.slice(0, 16));
+  if (!head.includes("ftyp")) {
+    return json(
+      {
+        error: "video_not_mp4",
+        url: video.url,
+        size,
+        content_type: vres.headers.get("content-type"),
+        hint: "The URL did not return a real MP4 file. Check the video source.",
+      },
+      400
+    );
+  }
+  if (size < 100000) {
+    return json({ error: "video_too_small", size, url: video.url }, 400);
+  }
 
   const sourceInfo = {
     source: "FILE_UPLOAD",
