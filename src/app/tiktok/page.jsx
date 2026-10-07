@@ -102,13 +102,20 @@ export default function TikTokPublisherPage() {
         body: JSON.stringify({ video, privacy, title }),
       });
       const d = await r.json();
-      addLog(`Init response: ${d.ok ? "ok" : "ERROR " + JSON.stringify(d.error || d)}`);
+      addLog("Init response: " + JSON.stringify(d));
       if (!d.ok) {
+        addLog("ERROR complet: " + JSON.stringify(d.direct_error || d.inbox_error || d.tiktok || d));
         setPublishing(false);
         setFinalStatus("FAILED");
         return;
       }
-      addLog(`publish_id = ${d.publish_id}  (video ${d.video_size} bytes)`);
+      addLog(
+        `mode = ${d.mode === "inbox" ? "DRAFT (inbox)" : "DIRECT"}` +
+          ` · publish_id = ${d.publish_id} · video ${d.video_size} bytes`
+      );
+      if (d.mode === "inbox") {
+        addLog("Trimis ca DRAFT — deschide TikTok → Inbox → finalizeaza postarea.");
+      }
       addLog("Uploaded. Polling status…");
       setPublishId(d.publish_id);
       let attempts = 0;
@@ -294,7 +301,8 @@ export default function TikTokPublisherPage() {
               )}
               {finalStatus === "SEND_TO_USER_INBOX" && (
                 <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                  Sent to the TikTok inbox (draft). Finish it in the TikTok app.
+                  ✅ Sent to the TikTok inbox as a draft. Open the TikTok app → Inbox
+                  (notifications) → tap the video → Post. Done.
                 </div>
               )}
               {finalStatus === "FAILED" && (
@@ -313,6 +321,19 @@ export default function TikTokPublisherPage() {
                 <pre className="max-h-56 overflow-auto whitespace-pre-wrap text-xs leading-relaxed text-green-300">
                   {log.join("\n")}
                 </pre>
+                <button
+                  onClick={() => {
+                    try {
+                      navigator.clipboard.writeText(log.join("\n"));
+                      addLog("Log copied to clipboard");
+                    } catch (e) {
+                      addLog("copy failed: " + String(e));
+                    }
+                  }}
+                  className="mt-2 rounded border border-gray-600 px-3 py-1 text-xs text-gray-300 hover:bg-gray-800"
+                >
+                  Copy log
+                </button>
               </div>
             )}
 

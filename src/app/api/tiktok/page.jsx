@@ -19,7 +19,8 @@ const CLIENT_KEY = process.env.TIKTOK_CLIENT_KEY || "";
 const CLIENT_SECRET = process.env.TIKTOK_CLIENT_SECRET || "";
 const REDIRECT_URI =
   process.env.TIKTOK_REDIRECT_URI || "https://petassists.com/api/tiktok";
-const SCOPES = "user.info.basic,video.publish";
+const SCOPES =
+  process.env.TIKTOK_SCOPES || "user.info.basic,video.publish,video.upload";
 
 // Videoclipurile noastre (fisiere deja publicate pe site, continut propriu)
 const VIDEOS = {
@@ -283,8 +284,15 @@ export async function action({ request }) {
   const bytes = new Uint8Array(await vres.arrayBuffer());
   const size = bytes.length;
 
-  // 2. Initializam publicarea (FILE_UPLOAD, un singur chunk — fisierele sunt mici)
-  const init = await tiktokFetch(
+  const sourceInfo = {
+    source: "FILE_UPLOAD",
+    video_size: size,
+    chunk_size: size,
+    total_chunk_count: 1,
+  };
+
+  // 2a. Incercam PUBLICARE DIRECTA (video.publish)
+  const direct = await tiktokFetch(
     request,
     "https://open.tiktokapis.com/v2/post/publish/video/init/",
     {
@@ -297,20 +305,41 @@ export async function action({ request }) {
           disable_duet: false,
           disable_stitch: false,
         },
-        source_info: {
-          source: "FILE_UPLOAD",
-          video_size: size,
-          chunk_size: size,
-          total_chunk_count: 1,
-        },
+        source_info: sourceInfo,
       }),
     }
   );
 
-  const publishId = init.data?.data?.publish_id;
-  const uploadUrl = init.data?.data?.upload_url;
+  let mode = "direct";
+  let initData = direct.data;
+
+  // 2b. Daca Direct Post e refuzat -> trimitem ca DRAFT in inbox (video.upload)
+  if (!initData?.data?.publish_id) {
+    const inbox = await tiktokFetch(
+      request,
+      "https://open.tiktokapis.com/v2/post/publish/inbox/video/init/",
+      { method: "POST", body: JSON.stringify({ source_info: sourceInfo }) }
+    );
+    if (inbox.data?.data?.publish_id) {
+      mode = "inbox";
+      initData = inbox.data;
+    } else {
+      return json(
+        {
+          error: "init_failed",
+          tried: ["direct", "inbox"],
+          direct_error: direct.data?.error || null,
+          inbox_error: inbox.data?.error || null,
+        },
+        400
+      );
+    }
+  }
+
+  const publishId = initData?.data?.publish_id;
+  const uploadUrl = initData?.data?.upload_url;
   if (!publishId || !uploadUrl) {
-    return json({ error: "init_failed", tiktok: init.data }, 400);
+    return json({ error: "init_failed", mode, tiktok: initData }, 400);
   }
 
   // 3. Urcam octetii video
@@ -331,5 +360,5 @@ export async function action({ request }) {
     );
   }
 
-  return json({ ok: true, publish_id: publishId, video_size: size, privacy });
+  return json({ ok: true, mode, publish_id: publishId, video_size: size, privacy });
 }
